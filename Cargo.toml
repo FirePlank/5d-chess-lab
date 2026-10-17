@@ -1,0 +1,22 @@
+# 5D Chess Lab: the site (static/), its browser build of the Kairos core (wasm/) and the
+# kairos-web server (server/). The engine is the `kairos` crate from its own repository,
+# pinned to one commit by Cargo.lock; the Pages workflow moves the pin forward when the
+# engine changes (`cargo update -p kairos`), after the site's checks pass.
+[workspace]
+members = ["wasm", "server"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/FirePlank/5d-chess-lab"
+
+[workspace.dependencies]
+kairos = { git = "https://github.com/FirePlank/5d-chess-engine", branch = "main" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+debug = false

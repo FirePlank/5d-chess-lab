@@ -1,6 +1,6 @@
 // Load every 5dpgn file of a directory tree through the WASM viewer core, view every
 // main-line position and report failures and the slowest files:
-//   node tests/web/pgn_corpus.mjs <dir>
+//   node tests/pgn_corpus.mjs <dir>
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadCore } from './core.mjs';

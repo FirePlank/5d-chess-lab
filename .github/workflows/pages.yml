@@ -1,63 +1,116 @@
-# The static site on GitHub Pages: analysis board, play against Kairos and the game browser,
-# all in the browser on the WASM engine (scripts/build_pages.sh). Rebuilt on every push to main
-# that touches the engine or the site.
+# 5D Chess Lab on GitHub Pages: the browser build of the Kairos core, checked, assembled with
+# scripts/build_pages.sh and deployed.
+#
+# - A push to main deploys the site with the engine commit Cargo.lock pins.
+# - When the engine changes (a repository_dispatch from the engine repository, or the hourly
+#   check, which stops at once when the pin is current), the pin first moves to the engine's
+#   latest commit; the new Cargo.lock is committed ("Engine abc1234") only once the build and
+#   the checks pass, and then deployed. A failing engine commit leaves the site as it was.
+# - Run workflow (Actions tab) does the same by hand.
 name: Pages
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'src/**'
-      - 'web/**'
-      - 'data/**'
-      - 'build.rs'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - '.cargo/**'
-      - 'scripts/build_pages.sh'
-      - '.github/workflows/pages.yml'
+  repository_dispatch:
+    types: [engine-updated]
+  schedule:
+    - cron: '23 * * * *'
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  ENGINE_REPO: FirePlank/5d-chess-engine
 
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
+    outputs:
+      deploy: ${{ steps.engine.outputs.skip != 'true' }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Is the engine pin current?
+        id: engine
+        run: |
+          pinned=$(sed -n '/^name = "kairos"$/,/^$/s/^source = ".*#\([0-9a-f]*\)"$/\1/p' Cargo.lock)
+          latest=$(git ls-remote "https://github.com/$ENGINE_REPO" refs/heads/main | cut -f1)
+          echo "pinned $pinned, engine main $latest"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = push ] || [ -z "$latest" ]; then
+            echo "update=false" >> "$GITHUB_OUTPUT"
+          elif [ "$pinned" != "$latest" ]; then
+            echo "update=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "update=false" >> "$GITHUB_OUTPUT"
+            # Nothing new from the engine: only a manual run rebuilds anyway.
+            [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rust with the wasm32-wasip1-threads target
+        if: steps.engine.outputs.skip != 'true'
         run: |
           rustup toolchain install stable --profile minimal --target wasm32-wasip1-threads
           rustup default stable
 
       - uses: Swatinem/rust-cache@v2
+        if: steps.engine.outputs.skip != 'true'
         with:
           shared-key: pages
-          workspaces: web/wasm -> target
+
+      - name: Move the engine pin to ${{ steps.engine.outputs.latest }}
+        if: steps.engine.outputs.update == 'true'
+        run: cargo update -p kairos --precise "${{ steps.engine.outputs.latest }}"
 
       - name: Build the browser engine
+        if: steps.engine.outputs.skip != 'true'
         run: cargo wasm
 
+      - name: The server still builds
+        if: steps.engine.outputs.skip != 'true'
+        run: cargo check --release -p kairos-web
+
+      - name: Checks of the browser build
+        if: steps.engine.outputs.skip != 'true'
+        run: |
+          node tests/smoke.mjs > /dev/null
+          node tests/records.mjs games/sprt/*.jsonl games/match/*.jsonl
+
+      - name: Commit the new engine pin
+        if: steps.engine.outputs.update == 'true'
+        run: |
+          sha="${{ steps.engine.outputs.latest }}"
+          subject=$(curl -fsSL "https://api.github.com/repos/$ENGINE_REPO/commits/$sha" | python3 -c 'import json,sys; print(json.load(sys.stdin)["commit"]["message"].splitlines()[0])' || true)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Engine ${sha:0:7}" -m "${subject:+$subject }https://github.com/$ENGINE_REPO/commit/$sha" -- Cargo.lock
+          git pull --rebase origin main
+          git push origin HEAD:main
+
       - name: Assemble the site
-        run: bash scripts/build_pages.sh _site
+        if: steps.engine.outputs.skip != 'true'
+        run: GITHUB_SHA=$(git rev-parse HEAD) bash scripts/build_pages.sh _site
 
       - uses: actions/configure-pages@v5
+        if: steps.engine.outputs.skip != 'true'
 
       - uses: actions/upload-pages-artifact@v3
+        if: steps.engine.outputs.skip != 'true'
         with:
           path: _site
 
   deploy:
     needs: build
+    if: needs.build.outputs.deploy == 'true'
     runs-on: ubuntu-24.04
     environment:
       name: github-pages

@@ -1,0 +1,15 @@
+[package]
+name = "kairos-web"
+version = "0.1.0"
+description = "Serves 5D Chess Lab locally, with play against the native Kairos engine"
+edition.workspace = true
+license.workspace = true
+publish = false
+build = "build.rs"
+
+[[bin]]
+name = "kairos-web"
+path = "src/main.rs"
+
+[dependencies]
+kairos.workspace = true

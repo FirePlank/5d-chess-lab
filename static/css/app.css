@@ -141,10 +141,12 @@ svg { width: 18px; height: 18px; flex: none; }
   padding: 0 var(--s3) 0 var(--s4);
   background: var(--page);
 }
-.site-logo { font-size: 22px; font-weight: 700; color: var(--strong); text-decoration: none; letter-spacing: -.02em; }
+.site-logo { font-weight: 700; color: var(--strong); text-decoration: none; letter-spacing: -.02em; }
 .build { font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); text-decoration: none; margin-left: 10px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border, currentColor); opacity: .75; align-self: center; }
 .build:hover { opacity: 1; }
-.site-logo .tld { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 3px; vertical-align: 6px; }
+.site-logo { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.site-logo .logo-5d { font-size: 15px; font-weight: 800; letter-spacing: -.02em; color: #fff; background: var(--accent); border-radius: 6px; padding: 2px 6px 3px; }
+.site-logo .logo-name { font-size: 19px; font-weight: 700; }
 .site-nav { display: flex; height: 100%; }
 .site-nav a {
   display: flex; align-items: center; padding: 0 var(--s3);
@@ -490,8 +492,7 @@ table.games { width: 100%; border-collapse: collapse; font-size: 13px; }
   button, a, .mv, .variant-display, label.switch { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
   .site-header { gap: 6px; padding: 0 2px 0 var(--s3); }
-  .site-logo { font-size: 18px; }
-  .site-logo .tld, .build, #btn-help { display: none; }
+  .site-logo .logo-name, .build, #btn-help { display: none; }
   .site-nav { min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .site-nav::-webkit-scrollbar { display: none; }
   .site-nav a { padding: 0 6px; font-size: 11.5px; letter-spacing: .01em; flex: none; }
@@ -574,7 +575,6 @@ table.games { width: 100%; border-collapse: collapse; font-size: 13px; }
 /* Very small phones (320-360 px): a tighter header. */
 @media (max-width: 360px) {
   .site-header { padding-left: var(--s2); gap: 2px; }
-  .site-logo { font-size: 16px; }
   .site-nav a { padding: 0 5px; font-size: 11px; letter-spacing: 0; }
   #btn-board-theme { display: none; }
 }
@@ -582,7 +582,7 @@ table.games { width: 100%; border-collapse: collapse; font-size: 13px; }
 /* Phones held sideways: board and panels side by side, with a narrower panel. */
 @media (max-height: 520px) and (orientation: landscape) {
   :root { --header-h: 40px; --side-w: min(300px, 42vw); }
-  .site-logo .tld, .build, #btn-help { display: none; }
+  .site-logo .logo-name, .build, #btn-help { display: none; }
   .site-nav a { padding: 0 8px; font-size: 12px; }
   .eval-gauge { display: none !important; }
   .side { padding: 6px; }

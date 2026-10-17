@@ -1,5 +1,5 @@
 // Replay SPRT game records through the WASM viewer core and cross-check them:
-//   node tests/web/records.mjs <games.jsonl>... [--max N]
+//   node tests/records.mjs <games.jsonl>... [--max N]
 // Every line must load; its action count must match the record; book/eval tags must line up
 // with the record's fields; a "checkmate"/"stalemate" ending must be the final position's status.
 import { readFileSync } from 'node:fs';

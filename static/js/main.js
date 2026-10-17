@@ -1,5 +1,5 @@
-// App shell: routing between Analysis, Play, the board editor and Games, theme, shared board
-// and engine.
+// 5D Chess Lab's shell: routing between Analysis, Play, the board editor and Games, theme,
+// shared board and engine.
 import { MultiverseView } from './board.js';
 import { MoveInput } from './input.js';
 import { Engine, defaultEngineSettings } from './kairos.js';
@@ -96,7 +96,8 @@ async function showBuild() {
     const a = $('#build');
     a.textContent = v.sha.slice(0, 7);
     const when = v.date ? ' · ' + v.date.slice(0, 16).replace('T', ' ') : '';
-    a.title = `Build ${v.sha.slice(0, 7)}${when}${v.subject ? '\n' + v.subject : ''}`;
+    const engine = v.engine && v.engine.sha ? `\nEngine: Kairos ${v.engine.sha.slice(0, 7)}` : '';
+    a.title = `Build ${v.sha.slice(0, 7)}${when}${v.subject ? '\n' + v.subject : ''}${engine}`;
     if (v.url) a.href = v.url;
     a.classList.remove('hidden');
   } catch (e) { /* a local server has no build info */ }

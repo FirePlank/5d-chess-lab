@@ -1,0 +1,16 @@
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
+# `cargo wasm`: the browser build of the Kairos core (target/wasm32-wasip1-threads/release/
+# kairos_wasm.wasm), one build for every browser like Apeiron's: shared memory and std threads
+# (the search's Lazy SMP helpers run in Web Workers) when the page is cross-origin isolated,
+# one thread otherwise. Needs the target once: `rustup target add wasm32-wasip1-threads`.
+# `cargo web`: the local server (static/ plus play against the native engine).
+[alias]
+wasm = "build --release -p kairos-wasm --target wasm32-wasip1-threads"
+web = "run --release -p kairos-web --"
+
+# Target flags replace [build] rustflags (target-cpu=native means nothing in wasm): a 32 MB
+# main stack for the recursive search, and up to 4 GB of memory for helper stacks and hash.
+[target.wasm32-wasip1-threads]
+rustflags = ["-C", "link-arg=-zstack-size=33554432", "-C", "link-arg=--max-memory=4294967296"]

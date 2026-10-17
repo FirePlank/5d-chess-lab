@@ -1,6 +1,6 @@
-//! kairos-web: the Kairos website. Serves the viewer / analysis board (web/static, with the
-//! rules and engine compiled to WASM), a browser over game record files and play against
-//! the engine, one human player at a time.
+//! kairos-web: 5D Chess Lab on your own machine. Serves the site (static/, with the rules
+//! and engine compiled to WASM), a browser over game record files and play against the
+//! native Kairos engine, one human player at a time.
 //!
 //! kairos-web [--port 8080] [--host 127.0.0.1] [--root <repo>] [--games <dir>]...
 //!            [--hash 2048] [--threads <cores - 1>]
@@ -1228,7 +1228,9 @@ impl Server {
             return Response::json(obj![
                 ("ok", true),
                 ("name", "kairos"),
-                ("version", env!("CARGO_PKG_VERSION")),
+                // The engine commit (Cargo.lock's pin; see build.rs), short.
+                ("version", &env!("KAIROS_ENGINE_REV")[..env!("KAIROS_ENGINE_REV").len().min(7)]),
+                ("engine", env!("KAIROS_ENGINE_REV")),
                 ("games", !self.games.dirs.is_empty()),
                 ("play", true)
             ]);
@@ -1292,17 +1294,19 @@ fn newest_mtime(dir: &Path, exts: &[&str], acc: &mut SystemTime) {
 
 /// The browser engine as `cargo wasm` builds it: one wasm32-wasip1-threads build, threaded when
 /// the browser allows shared memory and single-threaded otherwise.
-const WASM_BUILD: &str = "web/wasm/target/wasm32-wasip1-threads/release/kairos_wasm.wasm";
+const WASM_BUILD: &str = "target/wasm32-wasip1-threads/release/kairos_wasm.wasm";
 
-/// The browser engine to serve: web/static/kairos.wasm if present (a deployed copy), else the
+/// The browser engine to serve: static/kairos.wasm if present (a deployed copy), else the
 /// build output. Warns when it is missing or older than the sources; it is never built here.
 fn browser_engine(root: &Path) -> PathBuf {
-    let copy = root.join("web/static/kairos.wasm");
+    let copy = root.join("static/kairos.wasm");
     let path = if copy.is_file() { copy } else { root.join(WASM_BUILD) };
     let mut newest = SystemTime::UNIX_EPOCH;
-    newest_mtime(&root.join("src"), &["rs"], &mut newest);
-    newest_mtime(&root.join("web/wasm"), &["rs", "toml"], &mut newest);
-    newest_mtime(&root.join("data"), &["bin"], &mut newest);
+    // Its sources here, and the engine commit Cargo.lock pins.
+    newest_mtime(&root.join("wasm"), &["rs", "toml"], &mut newest);
+    if let Ok(m) = std::fs::metadata(root.join("Cargo.lock")).and_then(|m| m.modified()) {
+        newest = newest.max(m);
+    }
     match std::fs::metadata(&path).and_then(|m| m.modified()) {
         Err(_) => eprintln!("warning: the browser engine is not built (analysis needs it): run `cargo wasm`"),
         Ok(m) if m < newest => eprintln!("warning: the browser engine is older than the sources: run `cargo wasm`"),
@@ -1317,7 +1321,8 @@ fn main() {
         eprintln!("kairos-web [--port 8080] [--host 127.0.0.1] [--root <repo>] [--games <dir>]... [--hash 2048] [--threads N] [--archive <file>]");
         return;
     }
-    let root = PathBuf::from(arg(&args, "--root").unwrap_or_else(|| env!("CARGO_MANIFEST_DIR").to_string()));
+    // The repository: the server crate's parent directory.
+    let root = arg(&args, "--root").map(PathBuf::from).unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join(".."));
     let port: u16 = arg(&args, "--port").and_then(|p| p.parse().ok()).unwrap_or(8080);
     let host = arg(&args, "--host").unwrap_or_else(|| "127.0.0.1".into());
     let hash: usize = arg(&args, "--hash").and_then(|p| p.parse().ok()).unwrap_or(2048);
@@ -1331,7 +1336,7 @@ fn main() {
     let archive = arg(&args, "--archive").map(PathBuf::from).or_else(|| Some(root.join("games/web/played.jsonl")));
     let server = Arc::new(Server {
         wasm: browser_engine(&root),
-        static_dir: root.join("web/static"),
+        static_dir: root.join("static"),
         games: Games { dirs: dirs.clone(), index: Mutex::new(HashMap::new()), variants: Mutex::new(HashMap::new()) },
         play: Play::new(hash, threads, archive),
     });

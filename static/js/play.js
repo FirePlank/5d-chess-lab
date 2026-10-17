@@ -398,8 +398,9 @@ export class Play {
       ? { where: 'server', version: `Kairos ${app.server.version || ''}`.trim() }
       : {
         where: 'browser',
-        version: app.build ? `Kairos ${app.build.sha.slice(0, 7)}` : 'Kairos (local build)',
-        build: app.build ? app.build.sha : null,
+        // The engine commit the site was built with (version.json; none on a local build).
+        version: app.build && app.build.engine ? `Kairos ${app.build.engine.sha.slice(0, 7)}` : 'Kairos (local build)',
+        build: app.build && app.build.engine ? app.build.engine.sha : null,
         threads: app.engine.threadsActive || app.engine.threads,
         hashMb: app.engine.hashMb,
       };

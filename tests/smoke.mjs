@@ -1,4 +1,4 @@
-// Node smoke test of the WASM build: node tests/web/smoke.mjs [games.jsonl]
+// Node smoke test of the WASM build: node tests/smoke.mjs [games.jsonl]
 import { readFileSync } from 'node:fs';
 import { loadCore } from './core.mjs';
 
