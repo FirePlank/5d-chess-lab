@@ -89,6 +89,9 @@ export class Play {
       };
     });
     this.bindTimeControl();
+    const skill = Number(store('play.skill')) || 8;
+    $('#play-skill').value = Math.max(1, Math.min(8, Math.round(skill)));
+    $('#play-skill').onchange = () => store('play.skill', Number($('#play-skill').value));
     // The opening book (book positions answered from theory at once): on unless turned off.
     $('#play-book').checked = store('play.book') !== false;
     $('#play-book').onchange = () => store('play.book', $('#play-book').checked);
@@ -285,6 +288,7 @@ export class Play {
       color: this.color === 'r' ? 'random' : this.color,
       ...this.timeControl(),
       book: $('#play-book').checked,
+      skillLevel: Number($('#play-skill').value),
     };
     this.wantSetup = false;
     // When the game began, which also marks it as one to keep when it ends (see `archive`).
@@ -420,7 +424,8 @@ export class Play {
       timeControl: g.clock ? clockShort(g.clock) : `${g.movetime / 1000}s/move`,
       clock: g.clock || null,
       movetime: g.clock ? null : g.movetime,
-      openingBook: g.book !== false,
+      openingBook: g.book !== false && (g.skillLevel || 8) === 8,
+      skillLevel: g.skillLevel || 8,
       engine,
     };
     saveGame(rec).then(() => toast('Game saved to Games')).catch((e) => toast('Could not save the game: ' + e.message, { error: true }));
@@ -463,7 +468,7 @@ export class Play {
       const human = g.humanColor;
       const youName = mine ? 'You' : 'Challenger';
       const topBlack = human === 'w';
-      $('#clock-top-name').textContent = 'Kairos';
+      $('#clock-top-name').textContent = `Kairos · Level ${g.skillLevel || 8}`;
       $('#clock-bottom-name').textContent = youName;
       this.clockSides = topBlack ? ['b', 'w'] : ['w', 'b'];
       let status;
@@ -478,7 +483,7 @@ export class Play {
         const name = this.variantName(g);
         const variant = name.includes(' - ') ? name.split(' - ').slice(1).join(' - ') : name;
         const line = $('#play-thinking');
-        line.textContent = g.over ? '' : [g.clock ? clockShort(g.clock) : `${g.movetime / 1000}s/move`, variant, g.book === false ? 'no book' : ''].filter(Boolean).join(' · ');
+        line.textContent = g.over ? '' : [g.clock ? clockShort(g.clock) : `${g.movetime / 1000}s/move`, variant, `Level ${g.skillLevel || 8}`, g.book === false || (g.skillLevel || 8) < 8 ? 'no book' : ''].filter(Boolean).join(' · ');
         line.title = g.clock ? `${clockText(g.clock)} · ${name}` : name;
       }
       $('#play-resign').classList.toggle('hidden', !mine || !!g.over);

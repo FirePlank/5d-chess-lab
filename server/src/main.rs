@@ -538,6 +538,7 @@ struct Session {
     movetime: u64,
     /// The engine plays from its opening book (`OwnBook`) in book positions.
     book: bool,
+    skill_level: i64,
     over: Option<(String, String)>,
     ended_at: Option<Instant>,
     thinking: bool,
@@ -583,6 +584,7 @@ struct EngineJob {
     ponder: bool,
     /// Answer book positions from the opening book (`OwnBook`).
     book: bool,
+    skill_level: i64,
 }
 
 fn new_token() -> String {
@@ -677,6 +679,7 @@ impl Play {
                 self.stop.store(false, Ordering::SeqCst);
                 g.take().unwrap()
             };
+            eng.set_option("Skill Level", &OptionValue::Int(job.skill_level));
             eng.set_option("OwnBook", &OptionValue::Bool(job.book && !job.ponder));
             if job.ponder {
                 // Think on the human's time: the table (kept across actions) fills for the
@@ -735,6 +738,7 @@ impl Play {
                 ("toMove", if s.state.get_present().1 { "b" } else { "w" }),
                 ("movetime", s.movetime),
                 ("book", s.book),
+                ("skillLevel", s.skill_level),
                 ("thinking", s.thinking),
                 ("over", s.over.as_ref().map(|(r, why)| obj![("result", r.as_str()), ("reason", why.as_str())])),
                 ("info", s.info.clone()),
@@ -891,6 +895,7 @@ impl Play {
             ("white", if s.human_black { "Kairos" } else { "Human" }),
             ("black", if s.human_black { "Human" } else { "Kairos" }),
             ("human", human),
+            ("skillLevel", s.skill_level),
             ("variant", s.variant.as_str()),
             ("score", match result { "1-0" => 1.0, "0-1" => 0.0, _ => 0.5 }),
             ("reason", reason),
@@ -940,9 +945,9 @@ impl Play {
                 }
                 None => Limits { movetime: Some(s.movetime), ..Limits::default() },
             };
-            self.post_job(EngineJob { game_id: gid, state: s.state.clone(), limits, ponder: false, book: s.book });
-        } else {
-            self.post_job(EngineJob { game_id: gid, state: s.state.clone(), limits: Limits::default(), ponder: true, book: false });
+            self.post_job(EngineJob { game_id: gid, state: s.state.clone(), limits, ponder: false, book: s.book, skill_level: s.skill_level });
+        } else if s.skill_level == 8 {
+            self.post_job(EngineJob { game_id: gid, state: s.state.clone(), limits: Limits::default(), ponder: true, book: false, skill_level: 8 });
         }
     }
 
@@ -1088,6 +1093,7 @@ impl Play {
                     turn_start: Instant::now(),
                     movetime,
                     book,
+                    skill_level: body.get("skillLevel").int().unwrap_or(8).clamp(1, 8),
                     over: None,
                     ended_at: None,
                     thinking: false,

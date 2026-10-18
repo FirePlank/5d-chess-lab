@@ -157,12 +157,12 @@ export class Engine {
    * `timeLeft`/`increment` (ms) and `movetime: null`. `book`: answer a book position from the
    * opening book at once (the engine's `OwnBook`; Play only).
    */
-  async search({ position, movetime = 86_400_000, depth, newGame = false, resume = false, timeLeft, increment, delay, delayPerTimeline, book = false, multiPV }) {
+  async search({ position, movetime = 86_400_000, depth, newGame = false, resume = false, timeLeft, increment, delay, delayPerTimeline, book = false, multiPV, skillLevel = 8 }) {
     await this.start();
     this.stop();
     const id = ++this.reqId;
     this.busy = true;
-    this.worker.postMessage({ type: 'search', id, position, movetime, depth, newGame, resume, timeLeft, increment, delay, delayPerTimeline, book, multiPV });
+    this.worker.postMessage({ type: 'search', id, position, movetime, depth, newGame, resume, timeLeft, increment, delay, delayPerTimeline, book, multiPV, skillLevel });
     return id;
   }
 

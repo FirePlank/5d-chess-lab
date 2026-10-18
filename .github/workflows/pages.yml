@@ -83,6 +83,7 @@ jobs:
         if: steps.engine.outputs.skip != 'true'
         run: |
           node tests/smoke.mjs > /dev/null
+          node tests/strength.mjs
           node tests/records.mjs games/sprt/*.jsonl games/match/*.jsonl
 
       - name: Commit the new engine pin

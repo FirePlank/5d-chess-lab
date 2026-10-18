@@ -71,6 +71,7 @@ self.onmessage = async (e) => {
         delay: msg.delay,
         delayPerTimeline: msg.delayPerTimeline,
         multiPV: msg.multiPV,
+        skillLevel: msg.skillLevel,
         book: !!msg.book,
       });
       if (r.ok) self.postMessage({ type: 'done', id: msg.id, bestmove: r.bestmove });

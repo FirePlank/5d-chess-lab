@@ -50,6 +50,7 @@ export class LocalPlay {
         toMove: g.toMove,
         movetime: g.movetime,
         book: g.book,
+        skillLevel: g.skillLevel,
         thinking: g.thinking,
         over: g.over,
         info: g.info,
@@ -73,7 +74,7 @@ export class LocalPlay {
     return this.state();
   }
 
-  start({ variant = 'Standard - Turn Zero', color = 'random', clock = null, movetime = 2000, book = true }) {
+  start({ variant = 'Standard - Turn Zero', color = 'random', clock = null, movetime = 2000, book = true, skillLevel = 8 }) {
     this.engine.stop();
     this.rules.call({ cmd: 'new', position: variant });
     const start = this.view(0).position;
@@ -84,6 +85,7 @@ export class LocalPlay {
       id: this.gameId, variant, start, humanColor, node: 0, moves: [], evals: [],
       clock: clock && { base: clock.base, inc: clock.inc || 0, delay: clock.delay || 0, delayPerTimeline: clock.delayPerTimeline || 0 },
       left: [base, base], turnStart: performance.now(), turnDelay: 0, activeTimelines: 1,
+      skillLevel: Number.isInteger(skillLevel) ? Math.max(1, Math.min(8, skillLevel)) : 8,
       movetime, book: book !== false, toMove: 'w', thinking: false, over: null, info: null, fresh: true,
     };
     this.afterAction();
@@ -158,7 +160,7 @@ export class LocalPlay {
     this.searchFor = { id: g.id, position, lastScore: null };
     try {
       // The opening book answers book positions at once (the in-browser engine's OwnBook).
-      const id = await this.engine.search({ position, newGame, book: g.book, ...limits });
+      const id = await this.engine.search({ position, newGame, book: g.book, skillLevel: g.skillLevel, ...limits });
       if (this.game === g && this.searchFor && this.searchFor.position === position) this.searchId = id;
     } catch (e) {
       if (this.game === g && !g.over) this.finish(g.humanColor === 'w' ? '1-0' : '0-1', 'engine failed to start: ' + e.message);
@@ -171,7 +173,7 @@ export class LocalPlay {
     this.searchId = null;
     this.searchFor = null;
     // Without shared memory a search cannot be stopped (only its worker replaced), so no ponder.
-    if (!this.engine.shared) return;
+    if (!this.engine.shared || this.game.skillLevel < 8) return;
     this.engine.search({ position, movetime: PONDER_MS }).catch(() => {});
   }
 
