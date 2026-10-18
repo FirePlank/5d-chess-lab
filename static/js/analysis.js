@@ -1,6 +1,7 @@
 // The analysis board / game viewer: a game tree with variations, step-through navigation,
 // book and engine actions, the recorded eval graph and live engine analysis.
 import { Rules, parseInfo, threadsSupported } from './kairos.js';
+import { VariantPicker } from './variant-picker.js';
 import { apiGet } from './static-api.js';
 import { getGame, saveGame, putGame, recordLine } from './history.js';
 import { $, $$, el, toast, fmtScore, fmtNodes, winChance, recordScore, parseLan, store, confirmDialog } from './util.js';
@@ -177,76 +178,16 @@ export class Analysis {
     this.renderVariant();
   }
 
-  /** The variant picker shows the game's variant (Custom position for any other start). */
+  /** Keep the shared picker in sync with loaded games and custom positions. */
   renderVariant() {
-    const name = this.meta && this.meta.variant;
-    const known = this.variants.some((v) => v.name === name);
-    $('#variant-name').textContent = known ? name : 'Custom position';
+    this.variantPicker.setValue(this.meta && this.meta.variant);
   }
 
-  /**
-   * The variant picker at the top of the sidebar (as on infinitechess.org): the button opens
-   * the variant groups, a group opens its variants, and picking one starts a new board of it.
-   * A custom position is loaded with Load game.
-   */
   bindVariantPicker() {
-    const btn = $('#variant-display'), menu = $('#variant-dropdown');
-    const groups = [];
-    for (const v of this.variants) {
-      const [group, rest] = v.name.includes(' - ') ? v.name.split(' - ') : [v.name, null];
-      let g = groups.find((x) => x.name === group);
-      if (!g) groups.push((g = { name: group, variants: [] }));
-      g.variants.push({ name: v.name, label: rest || v.name });
-    }
-    const desc = {
-      Standard: '8\u00d78, the main game',
-      Simple: 'Smaller sets, 6\u00d76 and 7\u00d77',
-      Small: '5\u00d75',
-      'Very Small': '4\u00d74',
-      Misc: 'Several timelines, odd sets',
-      Focused: 'One kind of piece',
-      'Checkmate Practice': 'Mate with a lone piece',
-    };
-    const chevron = (pts, cls) => {
-      const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      s.setAttribute('class', cls);
-      s.setAttribute('viewBox', '0 0 24 24');
-      s.innerHTML = `<polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
-      return s;
-    };
-    const close = () => {
-      menu.classList.remove('open');
-      btn.classList.remove('open');
-      btn.setAttribute('aria-expanded', 'false');
-    };
-    // The group of the variant on the board is marked, so the list shows where you are.
-    const curGroup = () => groups.find((x) => x.variants.some((v) => v.name === (this.meta && this.meta.variant)));
-    const showGroups = () => menu.replaceChildren(...groups.map((g) => el('button', {
-      type: 'button', class: 'variant-group-item' + (g === curGroup() ? ' on' : ''), role: 'menuitem',
-      onclick: (e) => { e.stopPropagation(); showGroup(g); },
-    }, el('span', { class: 'group-name', text: g.name }), el('span', { class: 'group-desc', text: desc[g.name] || '' }), chevron('9 6 15 12 9 18', 'group-arrow'))));
-    const showGroup = (g) => {
-      const cur = this.meta && this.meta.variant;
-      menu.replaceChildren(
-        el('button', { type: 'button', class: 'variant-list-back', onclick: (e) => { e.stopPropagation(); showGroups(); } },
-          chevron('15 18 9 12 15 6', 'back-arrow'), el('span', { class: 'group-name', text: g.name }), el('span', { class: 'group-desc', text: desc[g.name] || '' })),
-        ...g.variants.map((v) => el('button', {
-          type: 'button', class: 'variant-item' + (v.name === cur ? ' on' : ''), role: 'menuitem', title: v.name,
-          onclick: () => { close(); this.pickVariant(v.name); },
-        }, v.label)));
-      menu.scrollTop = 0;
-    };
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      if (menu.classList.contains('open')) return close();
-      showGroups();
-      menu.classList.add('open');
-      btn.classList.add('open');
-      btn.setAttribute('aria-expanded', 'true');
-    };
-    menu.addEventListener('click', (e) => e.stopPropagation());
-    document.addEventListener('click', close);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menu.classList.contains('open')) close(); });
+    this.variantPicker = new VariantPicker($('#variant-selector'), {
+      variants: this.variants,
+      onChange: (name) => this.pickVariant(name),
+    });
   }
 
   /** Start a new board of variant `name`. */
@@ -1023,6 +964,7 @@ export class Analysis {
       base: this.loadedText || null,
       basePosition: this.loadedPosition || null,
       saved: Date.now(),
+      skillLevel: this.saveTarget?.skillLevel,
     };
     // A game you played keeps its record (what was played, how it ended); the analysis goes on top.
     if (existing && existing.kind === 'played') {

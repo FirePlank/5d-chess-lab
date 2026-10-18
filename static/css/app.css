@@ -192,6 +192,12 @@ textarea { width: 100%; height: 180px; padding: var(--s2); font: 12.5px/1.5 var(
 .field { display: flex; flex-direction: column; gap: var(--s1); margin-bottom: var(--s3); }
 .field > span { font-size: 12px; color: var(--muted); font-weight: 600; }
 .field.book-row { flex-direction: row; align-items: center; gap: var(--s2); }
+.field-heading { position: relative; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.field-help { display: inline-flex; }
+.help-dot { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 1px solid var(--border-strong); border-radius: 50%; background: none; color: var(--muted); font-size: 11px; line-height: 1; cursor: help; }
+.help-dot:hover, .help-dot:focus-visible { color: var(--strong); border-color: var(--text); }
+.help-tip { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: 280px; max-width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: var(--r); background: var(--panel); box-shadow: var(--shadow); color: var(--text); font-size: 12px; font-weight: 400; line-height: 1.5; opacity: 0; visibility: hidden; pointer-events: none; }
+.field-help:hover .help-tip, .field-help:focus-within .help-tip { opacity: 1; visibility: visible; }
 .book-hint { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 6px 10px; border-top: 1px solid var(--border); font-size: 13px; }
 .book-hint .book-label { font-size: 12px; color: var(--muted); font-weight: 600; }
 .book-hint .book-move { cursor: pointer; }
@@ -393,6 +399,15 @@ textarea { width: 100%; height: 180px; padding: var(--s2); font: 12.5px/1.5 var(
 .tc-custom .input { width: 100%; }
 .tc-desc { margin: var(--s2) 0 0; font-size: 12.5px; color: var(--muted); }
 .tc-desc:empty { display: none; }
+.skill-field { border: 0; padding: 0; margin: 0 0 var(--s4); min-width: 0; }
+.skill-field legend { padding: 0; margin-bottom: var(--s1); font-size: 12px; font-weight: 600; color: var(--muted); }
+.skill-pick { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+.skill-pick label { position: relative; cursor: pointer; }
+.skill-pick input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.skill-pick span { display: grid; place-items: center; height: 36px; border: 1px solid var(--border); border-radius: var(--r); background: var(--inset); color: var(--text); font-size: 14px; font-weight: 600; }
+.skill-pick label:hover span { border-color: var(--border-strong); color: var(--strong); }
+.skill-pick input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--strong); }
+.skill-pick input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .clock-delay { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--good); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .clock-delay:empty { display: none; }
 .player-bar.delaying .clock { background: color-mix(in srgb, var(--accent) 35%, var(--inset)); color: var(--strong); }

@@ -3,6 +3,7 @@
 // one). Without a server (the static site) the game runs in this page on the browser engine
 // (local-play.js), with the same requests and state.
 import { Rules } from './kairos.js';
+import { VariantPicker } from './variant-picker.js';
 import { LocalPlay } from './local-play.js';
 import { saveGame } from './history.js';
 import { lanText } from './input.js';
@@ -78,7 +79,14 @@ export class Play {
     $('#play-fine').classList.toggle('hidden', !this.app.server);
     const variants = this.rules.call({ cmd: 'variants' }).variants;
     const saved = store('play.variant.t0') || 'Standard - Turn Zero';
-    $('#play-variant').replaceChildren(...variants.map((v) => el('option', { value: v.name, text: v.name, selected: v.name === saved })));
+    this.variantPicker = new VariantPicker($('#play-variant'), {
+      variants,
+      value: variants.some((v) => v.name === saved) ? saved : 'Standard - Turn Zero',
+      onChange: (name) => {
+        if (name !== '__custom') store('play.variant.t0', name);
+        this.preview();
+      },
+    });
     $$('#play-color button').forEach((b) => {
       b.classList.toggle('on', b.dataset.v === this.color);
       b.onclick = () => {
@@ -89,17 +97,17 @@ export class Play {
       };
     });
     this.bindTimeControl();
-    const skill = Number(store('play.skill')) || 8;
-    $('#play-skill').value = Math.max(1, Math.min(8, Math.round(skill)));
-    $('#play-skill').onchange = () => store('play.skill', Number($('#play-skill').value));
-    // The opening book (book positions answered from theory at once): on unless turned off.
-    $('#play-book').checked = store('play.book') !== false;
+    this.skillLevel = Math.max(1, Math.min(8, Math.round(Number(store('play.skill')) || 8)));
+    $('#play-skill').replaceChildren(...Array.from({ length: 8 }, (_, i) => {
+      const level = i + 1;
+      return el('label', { title: level === 8 ? 'Level 8 · Full strength' : `Level ${level}` },
+        el('input', { type: 'radio', name: 'skill', value: level, checked: level === this.skillLevel, 'aria-label': `Level ${level}`,
+          onchange: () => { this.skillLevel = level; store('play.skill', level); this.updateBookControl(); } }),
+        el('span', { text: level }));
+    }));
     $('#play-book').onchange = () => store('play.book', $('#play-book').checked);
+    this.updateBookControl();
     $('#play-form').onsubmit = (e) => { e.preventDefault(); this.start(); };
-    $('#play-variant').onchange = () => {
-      if ($('#play-variant').value !== '__custom') store('play.variant.t0', $('#play-variant').value);
-      this.preview();
-    };
     $('#play-resign').onclick = async () => {
       if (await confirmDialog('Resign this game?', { text: 'Kairos wins the game.', ok: 'Resign', danger: true })) this.post('resign').catch(() => {});
     };
@@ -128,17 +136,12 @@ export class Play {
   /** Add (or update) the "Custom position" choice of the variant list, and choose it. */
   setCustom(position) {
     this.customPosition = position;
-    let opt = $('#play-variant option[value="__custom"]');
-    if (!opt) {
-      opt = el('option', { value: '__custom', text: 'Custom position (board editor)' });
-      $('#play-variant').prepend(opt);
-    }
-    $('#play-variant').value = '__custom';
+    this.variantPicker.setCustom('__custom', 'Custom position (board editor)');
   }
 
   /** The start position chosen: a variant's name, or the editor's position. */
   startPosition() {
-    const v = $('#play-variant').value;
+    const v = this.variantPicker.value;
     return v === '__custom' ? this.customPosition : v || 'Standard - Turn Zero';
   }
 
@@ -264,9 +267,12 @@ export class Play {
     $$('#play-tc button').forEach((b) => b.classList.toggle('on', b.dataset.id === this.tc.id));
     $('#tc-custom').classList.toggle('hidden', this.tc.id !== 'custom');
     const t = this.timeControl();
-    $('#tc-desc').textContent = t.clock
-      ? clockText(t.clock) + (t.clock.delay || t.clock.delayPerTimeline ? '. Each turn the clock waits out the delay (per timeline: times the timelines active at the start of the turn) before it runs; unused delay is lost.' : '')
-      : `No clock: Kairos thinks ${t.movetime / 1000} s per action.`;
+    $('#tc-desc').textContent = this.tc.id === 'custom' ? clockText(t.clock) : '';
+    $('#play-tc').title = t.clock ? clockText(t.clock) : `${t.movetime / 1000} seconds per move`;
+  }
+
+  updateBookControl() {
+    $('#play-book').checked = store('play.book') ?? this.skillLevel >= 5;
   }
 
   /** The chosen time control as the start request takes it: {clock (ms) | null, movetime}. */
@@ -282,13 +288,13 @@ export class Play {
 
   start() {
     const variant = this.startPosition();
-    if ($('#play-variant').value !== '__custom') store('play.variant.t0', variant);
+    if (this.variantPicker.value !== '__custom') store('play.variant.t0', variant);
     const body = {
       variant,
       color: this.color === 'r' ? 'random' : this.color,
       ...this.timeControl(),
       book: $('#play-book').checked,
-      skillLevel: Number($('#play-skill').value),
+      skillLevel: this.skillLevel,
     };
     this.wantSetup = false;
     // When the game began, which also marks it as one to keep when it ends (see `archive`).
@@ -424,7 +430,7 @@ export class Play {
       timeControl: g.clock ? clockShort(g.clock) : `${g.movetime / 1000}s/move`,
       clock: g.clock || null,
       movetime: g.clock ? null : g.movetime,
-      openingBook: g.book !== false && (g.skillLevel || 8) === 8,
+      openingBook: g.book !== false,
       skillLevel: g.skillLevel || 8,
       engine,
     };
@@ -483,7 +489,7 @@ export class Play {
         const name = this.variantName(g);
         const variant = name.includes(' - ') ? name.split(' - ').slice(1).join(' - ') : name;
         const line = $('#play-thinking');
-        line.textContent = g.over ? '' : [g.clock ? clockShort(g.clock) : `${g.movetime / 1000}s/move`, variant, `Level ${g.skillLevel || 8}`, g.book === false || (g.skillLevel || 8) < 8 ? 'no book' : ''].filter(Boolean).join(' · ');
+        line.textContent = g.over ? '' : [g.clock ? clockShort(g.clock) : `${g.movetime / 1000}s/move`, variant, `Level ${g.skillLevel || 8}`, g.book === false ? 'no book' : ''].filter(Boolean).join(' · ');
         line.title = g.clock ? `${clockText(g.clock)} · ${name}` : name;
       }
       $('#play-resign').classList.toggle('hidden', !mine || !!g.over);

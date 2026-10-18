@@ -77,13 +77,7 @@
       <div class="side-view" id="side-analysis">
         <div class="panel variant-setup">
           <span class="model-label">Variant</span>
-          <div class="variant-selector" id="variant-selector">
-            <button type="button" class="variant-display" id="variant-display" aria-haspopup="true" aria-expanded="false">
-              <span class="variant-name" id="variant-name"></span>
-              <svg class="selector-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div class="variant-dropdown" id="variant-dropdown" role="menu"></div>
-          </div>
+          <div class="variant-selector" id="variant-selector"></div>
         </div>
 
         <div class="panel game-info">
@@ -242,7 +236,7 @@
           </div>
           <form class="form" id="play-form">
             <h2 class="panel-title">Play against Kairos</h2>
-            <label class="field"><span>Variant</span><select id="play-variant"></select></label>
+            <div class="field"><span>Variant</span><div class="variant-selector" id="play-variant"></div></div>
             <div class="field">
               <span>Side</span>
               <div class="color-pick" id="play-color">
@@ -252,7 +246,10 @@
               </div>
             </div>
             <div class="field">
-              <span>Time control</span>
+              <div class="field-heading">Time control <span class="field-help">
+                <button type="button" class="help-dot" aria-label="About time controls" aria-describedby="tc-help">?</button>
+                <span class="help-tip" role="tooltip" id="tc-help">5+3 = 5 minutes + 3 seconds per turn.<br>3s/TL = 3 seconds of delay per active timeline, each turn. Unused delay is lost.</span>
+              </span></div>
               <div class="tc-grid" id="play-tc"></div>
               <div class="tc-custom hidden" id="tc-custom">
                 <label><span>Base (min)</span><input class="input" type="number" id="tc-base" min="0" max="180" step="0.5"></label>
@@ -262,11 +259,8 @@
               </div>
               <p class="tc-desc" id="tc-desc"></p>
             </div>
-            <label class="field"><span>Strength</span><select id="play-skill" aria-label="Kairos skill level">
-              <option value="1">1 · Beginner</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
-              <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8" selected>8 · Full strength</option>
-            </select><small>Higher levels play stronger. Opening theory is used at level 8.</small></label>
-            <div class="field book-row" title="In positions of the opening theory Kairos knows (the T0 Openings Guide and the f7-sac guide), play a theory move at once instead of searching">
+            <fieldset class="field skill-field"><legend>Strength</legend><div class="skill-pick" id="play-skill"></div></fieldset>
+            <div class="field book-row" title="Play known opening theory when available">
               <label class="switch"><input type="checkbox" id="play-book" checked aria-label="Opening book"><span></span></label>
               <span>Opening book</span>
             </div>

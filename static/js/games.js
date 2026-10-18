@@ -83,7 +83,7 @@ export class Games {
         el('td', { class: 'reason', text: g.reason || '', title: g.reason || '' }),
         el('td', { class: 'num', text: g.moves ? g.moves.length : '', dataset: { unit: g.moves && g.moves.length === 1 ? ' action' : ' actions' } }),
         el('td', { class: 'tc-cell', text: g.timeControl || '' }),
-        el('td', { class: 'engine-cell', text: g.engine ? g.engine.version : '', title: g.engine ? engineTitle(g.engine) : '' }),
+        el('td', { class: 'engine-cell', text: [g.engine && g.engine.version, g.skillLevel != null ? `Level ${g.skillLevel}` : ''].filter(Boolean).join(' · '), title: g.engine ? engineTitle(g.engine) : '' }),
         el('td', { class: 'del' },
           el('button', { type: 'button', dataset: { act: 'edit' }, title: 'Edit name and players', 'aria-label': 'Edit', text: '✎' }),
           el('button', { type: 'button', dataset: { act: 'delete' }, title: 'Delete this game', 'aria-label': 'Delete', text: '×' })));

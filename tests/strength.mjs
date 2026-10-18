@@ -14,6 +14,9 @@ for (let skillLevel = 1; skillLevel <= 8; skillLevel++) {
   assert.ok(result.bestmove, `level ${skillLevel} returns an action`);
   core.call({ cmd: 'new', position });
   assert.equal(core.call({ cmd: 'play', node: 0, lan: result.bestmove }).ok, true, `level ${skillLevel} is legal`);
+  info.length = 0;
+  assert.ok(core.call({ cmd: 'search', position, skillLevel, book: true, movetime: 100 }).bestmove);
+  assert.ok(info.some((line) => line.startsWith('string book ')), `level ${skillLevel} honors opening book`);
 }
 // A play handicap must not stick to a later analysis request.
 core.call({ cmd: 'search', position, skillLevel: 1, depth: 1, movetime: 100 });
