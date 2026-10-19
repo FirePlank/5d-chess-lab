@@ -4,6 +4,7 @@
 // (local-play.js), with the same requests and state.
 import { Rules } from './kairos.js';
 import { VariantPicker } from './variant-picker.js';
+import { sounds } from './sound.js';
 import { LocalPlay } from './local-play.js';
 import { saveGame } from './history.js';
 import { lanText } from './input.js';
@@ -117,7 +118,10 @@ export class Play {
     $('#play-unqueue').onclick = () => this.post('leave');
     $('#play-moves').addEventListener('click', (e) => {
       const c = e.target.closest('[data-id]');
-      if (c) { this.cur = +c.dataset.id; this.input.reset(); this.show(); }
+      if (c) {
+        const id = +c.dataset.id;
+        this.goto(id);
+      }
     });
     this.preview();
     setInterval(() => this.tickClocks(), 100);
@@ -136,7 +140,7 @@ export class Play {
   /** Add (or update) the "Custom position" choice of the variant list, and choose it. */
   setCustom(position) {
     this.customPosition = position;
-    this.variantPicker.setCustom('__custom', 'Custom position (board editor)');
+    this.variantPicker.setCustom('__custom', 'Custom position');
   }
 
   /** The start position chosen: a variant's name, or the editor's position. */
@@ -182,7 +186,7 @@ export class Play {
     if (params && params.get('position')) {
       this.setCustom(params.get('position'));
       history.replaceState(null, '', '#/play');
-      if (this.state && this.state.game && !this.state.game.over && this.state.you) toast('Finish or resign this game to play the position from the editor');
+      if (this.state && this.state.game && !this.state.game.over && this.state.you) toast('Finish or resign this game to play from another position');
       else this.wantSetup = true;
     }
     this.input.attach(this.source);
@@ -296,6 +300,7 @@ export class Play {
     // When the game began, which also marks it as one to keep when it ends (see `archive`).
     this.startedAt = Date.now();
     this.post('start', body).then(() => {
+      if (this.active) sounds.play('start');
       const g = this.state && this.state.game;
       if (g) {
         this.board.setFlipped(g.humanColor === 'b');
@@ -314,6 +319,7 @@ export class Play {
     this.cur = r.node;
     this.tree = r.tree;
     this.localMoves.push(this.tree.nodes[r.node].lan);
+    sounds.action(this.tree.nodes[r.node].san, { move: false, check: !this.tree.nodes[r.node].san.includes('#') });
     this.show();
     try {
       await this.post('move', { lan });
@@ -347,6 +353,7 @@ export class Play {
 
   /** Mirror the server game in the local rules instance. */
   sync(game) {
+    const previousCount = this.localMoves.length;
     const prefix = this.localStart === game.start && game.moves.length >= this.localMoves.length && this.localMoves.every((m, i) => m === game.moves[i]);
     if (!prefix) {
       const r = this.rules.call({ cmd: 'new', position: game.start });
@@ -373,9 +380,15 @@ export class Play {
       if (this.cur !== node) this.input.reset();
       this.cur = node;
     }
+    if (this.active && prefix && atEnd && this.localMoves.length > previousCount) {
+      sounds.action(this.tree.nodes[node].san, { check: !game.over });
+    }
   }
 
   onState(s) {
+    const previous = this.state && this.state.game;
+    const ended = s.game && s.game.over && previous && !previous.over && previous.start === s.game.start
+      && previous.moves.every((m, i) => s.game.moves[i] === m);
     this.state = s;
     this.stateAt = performance.now();
     // A setup preview stays on the board until a game is in progress.
@@ -385,6 +398,7 @@ export class Play {
     }
     this.previewing = false;
     if (s.game) this.sync(s.game);
+    if (this.active && ended) sounds.end(s.game.over.result, s.you ? s.game.humanColor : null);
     if (s.you) this.wantSetup = this.wantSetup && !!(s.game && s.game.over);
     if (s.you && s.game && s.game.over) this.archive(s.game);
     if (this.active) this.show();
@@ -616,6 +630,16 @@ export class Play {
     location.hash = `#/analysis?uci=${encodeURIComponent(uci)}`;
   }
 
+  goto(id) {
+    const node = this.tree?.nodes[id];
+    if (!node || id === this.cur) return;
+    const forward = node.ply > this.tree.nodes[this.cur].ply;
+    this.cur = id;
+    this.input.reset();
+    this.show();
+    if (forward) sounds.action(node.san, { check: false });
+  }
+
   key(e) {
     const k = e.key;
     if (k === 'Enter') this.input.submit();
@@ -625,7 +649,7 @@ export class Play {
       const n = this.tree && this.tree.nodes[this.cur];
       if (!n) return false;
       const next = k === 'ArrowLeft' ? n.parent : n.children[n.children.length - 1];
-      if (next != null) { this.cur = next; this.input.reset(); this.show(); }
+      if (next != null) this.goto(next);
     } else return false;
     return true;
   }

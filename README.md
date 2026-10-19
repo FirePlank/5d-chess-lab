@@ -14,7 +14,7 @@ an unofficial fan project, not affiliated with Thunkspace.
   actions marked, recorded evaluations as a graph, and the opening book's theory moves. Kairos
   analyses as you go (depth, score, several lines); moves made on the board build variations
   you can promote, reorder, comment and save.
-- **Play**: play Kairos on any built-in variant or a position from the editor, as either side,
+- **Play**: play Kairos on any built-in variant or a position from analysis or the editor, as either side,
   with a clock (increment and per-timeline delay) or a fixed think time.
 - **Editor**: set up any position: place, move and remove pieces on any board, add boards and
   timelines, select, drag, copy and paste boards and whole timelines, mark unmoved kings, rooks,
@@ -23,6 +23,8 @@ an unofficial fan project, not affiliated with Thunkspace.
 - **Games**: your games against Kairos and the analyses you save, kept in your browser
   (IndexedDB): rename them, add notes, reopen them, export them as JSONL.
 - **Rules**: how 5D chess works, from moving between boards to timelines and the present.
+- **Sounds**: standard Lichess move, capture, castling and game-result cues, with a saved sound toggle
+  in the header. Sounds work in Play and while making or reviewing moves in Analysis.
 
 ## Layout
 
@@ -64,6 +66,8 @@ git checkout Cargo.lock   # afterwards: the override rewrites the pin
 
 ```bash
 node tests/smoke.mjs                        # load, view and search through the browser build
+node tests/sound.mjs                        # sound events, notation and live-update deduplication
+node tests/navigation.mjs                   # WASD panning and analysis position transfer
 node tests/records.mjs games/sprt/*.jsonl   # replay records: actions, book and eval tags, results
 node tests/pgn_corpus.mjs <dir>             # load every 5dpgn file under a directory
 ```
@@ -87,3 +91,5 @@ engine commit.
 
 GNU General Public License v3.0, see [LICENSE](LICENSE); [NOTICE](NOTICE) lists code from other
 projects in the engine. Piece images: see `static/pieces/attributions.txt`.
+Sound samples: the standard Lichess theme, also used by Infinite Chess; see
+[sound provenance](static/sounds/README.md).

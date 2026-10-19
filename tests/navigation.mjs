@@ -1,0 +1,77 @@
+import assert from 'node:assert/strict';
+import { bindCameraKeys } from '../static/js/camera-keys.js';
+import { positionFromView } from '../static/js/position.js';
+import { loadCore } from './core.mjs';
+
+const listeners = {};
+const listen = (name, fn) => (listeners[name] ||= []).push(fn);
+const emit = (name, event = {}) => { for (const fn of listeners[name] || []) fn(event); };
+let scheduled, dialog = false;
+globalThis.document = { addEventListener: listen, querySelector: () => dialog, activeElement: null };
+globalThis.window = { addEventListener: listen };
+globalThis.requestAnimationFrame = (fn) => { scheduled = fn; return 1; };
+globalThis.cancelAnimationFrame = () => { scheduled = null; };
+const board = { cam: { x: 0, y: 0, s: 20 }, moveTo(cam) { this.cam = cam; } };
+let cameraActive = true;
+bindCameraKeys(board, () => cameraActive);
+const key = (k, extras = {}) => ({ key: k, preventDefault() {}, ...extras });
+emit('keydown', key('d'));
+scheduled(performance.now() + 16);
+assert.ok(board.cam.x > 0, 'D pans right');
+assert.equal(board.cam.y, 0);
+let time = performance.now() + 60;
+scheduled(time);
+const before = board.cam.x;
+scheduled(time += 16);
+const normal = board.cam.x - before;
+emit('keydown', key('Shift', { shiftKey: true }));
+const boostStart = board.cam.x;
+scheduled(time += 16);
+assert.ok(Math.abs(board.cam.x - boostStart - normal * 3) < 1e-8, 'Shift speeds up an already-held direction threefold');
+emit('keyup', key('Shift'));
+const releaseStart = board.cam.x;
+scheduled(time += 16);
+assert.ok(Math.abs(board.cam.x - releaseStart - normal) < 1e-8, 'releasing Shift restores normal speed while moving');
+emit('keydown', key('w'));
+scheduled(time += 16);
+assert.ok(board.cam.y < 0, 'W pans up while D is held');
+emit('keyup', key('d'));
+emit('keyup', key('w'));
+assert.equal(scheduled, null, 'releasing keys stops movement');
+emit('keydown', key('a', { ctrlKey: true }));
+assert.equal(scheduled, null, 'Ctrl+A is not intercepted');
+emit('keydown', key('s', { target: { closest: () => true } }));
+assert.equal(scheduled, null, 'typing does not move the camera');
+emit('keydown', key('a'));
+emit('blur');
+assert.equal(scheduled, null, 'losing focus stops movement');
+cameraActive = false;
+let consumed = false;
+emit('keydown', key('W', { shiftKey: true, preventDefault() { consumed = true; } }));
+assert.equal(scheduled, null, 'editor tools other than Move do not pan');
+assert.equal(consumed, false, 'Shift+piece shortcuts remain available to the editor');
+cameraActive = true;
+emit('keydown', key('d'));
+cameraActive = false;
+scheduled(time += 16);
+assert.equal(scheduled, null, 'switching away from Move stops held-key panning');
+cameraActive = true;
+dialog = true;
+emit('keydown', key('d'));
+assert.equal(scheduled, null, 'dialogs do not pan the board');
+
+const core = await loadCore();
+core.call({ cmd: 'new', position: 'Standard - Turn Zero' });
+const move = core.call({ cmd: 'play', node: 0, lan: '(0T1)e2e4' });
+const view = core.call({ cmd: 'view', node: move.node, draft: [] }).view;
+for (const original of [view, { ...view, even: true, boards: [
+  ...view.boards, ...view.boards.map(([l, ...rest]) => [-1, ...rest]),
+] }]) {
+  const result = core.call({ cmd: 'new', position: positionFromView(original) });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  const restored = core.call({ cmd: 'view', node: 0, draft: [] }).view;
+  assert.deepEqual(restored.boards, original.boards);
+  assert.equal(restored.player, original.player);
+  assert.equal(restored.even, original.even);
+}
+console.log('Held-key panning, input guards, and odd/even analysis position transfer passed.');

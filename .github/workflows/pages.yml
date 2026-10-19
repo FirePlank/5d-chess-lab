@@ -84,6 +84,8 @@ jobs:
         run: |
           node tests/smoke.mjs > /dev/null
           node tests/strength.mjs
+          node tests/sound.mjs
+          node tests/navigation.mjs
           node tests/records.mjs games/sprt/*.jsonl games/match/*.jsonl
 
       - name: Commit the new engine pin

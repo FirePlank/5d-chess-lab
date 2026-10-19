@@ -188,6 +188,7 @@ fn mime(path: &Path) -> &'static str {
         "png" => "image/png",
         "ico" => "image/x-icon",
         "wasm" => "application/wasm",
+        "mp3" => "audio/mpeg",
         "woff2" => "font/woff2",
         "txt" | "md" | "5dpgn" => "text/plain; charset=utf-8",
         "webmanifest" => "application/manifest+json",

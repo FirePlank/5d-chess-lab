@@ -1,6 +1,7 @@
 // Building an action on the board: select a piece, click a target, repeat on every board you
 // must (or want to) play, then submit. Shared by the analysis board and play mode.
 import { $, el, toast, store } from './util.js';
+import { sounds } from './sound.js';
 
 export class MoveInput {
   constructor(board) {
@@ -149,6 +150,7 @@ export class MoveInput {
     // Playing a move clears the user's marks (as lichess).
     this.board.clearMarks();
     const v = this.refresh();
+    sounds.action(v.draftSan?.[this.draft.length - 1] || '', { check: false });
     // A lone action (nothing else left to play) submits itself.
     const morePlayable = v.timelines.some((tl) => tl.end[1] === v.player && tl.status !== 'unplayable');
     if (this.autoSubmit && v.canSubmit && !morePlayable) this.submit();

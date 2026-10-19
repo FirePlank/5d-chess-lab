@@ -334,7 +334,7 @@ export class Editor {
   }
 
   buildPalette() {
-    const btn = (p) => el('button', { type: 'button', dataset: { piece: p }, title: `${sideName(isWhite(p))} ${NAMES[kind(p)]} (${p})`, onclick: () => this.setTool('piece', p) },
+    const btn = (p) => el('button', { type: 'button', dataset: { piece: p }, title: `${sideName(isWhite(p))} ${NAMES[kind(p)]} (${isWhite(p) ? 'Shift+' : ''}${kind(p)})`, onclick: () => this.setTool('piece', p) },
       el('img', { src: `pieces/${FILES[kind(p)]}-${isWhite(p) ? 'white' : 'black'}.svg`, alt: p }));
     $('#ed-palette').replaceChildren(
       ...PIECES.map((p) => btn(p)),
@@ -346,7 +346,7 @@ export class Editor {
     const name = `${sideName(isWhite(this.piece))} ${NAMES[kind(this.piece)]}`;
     return {
       move: 'Drag a piece to any square of any board, or click it and then the square. Drop it off the boards to remove it; hold Alt to copy it. Drag empty space to pan.',
-      piece: `Click or drag to place a ${name}; on the same piece, it removes it. Right-click swaps its colour. Keys: a piece's letter (Shift for White).`,
+      piece: `Click or drag to place a ${name}; on the same piece, it removes it. Right-click swaps its colour. Keys: a piece's letter (Shift for White). WASD pans only in the Move tool.`,
       erase: 'Click or drag over pieces to remove them.',
       unmoved: 'A filled dot marks a king or rook that can still castle, a pawn or brawn that can still move two squares; a ring, one that has moved. Click or drag over pieces to toggle them.',
       boards: 'Click a + to add a board (a copy of its neighbour). Drag boards to move them, Ctrl+drag to copy; click a timeline\'s label to select it all, Shift+drag to select several. Del deletes.',

@@ -2,6 +2,8 @@
 // shared board and engine.
 import { MultiverseView } from './board.js';
 import { MoveInput } from './input.js';
+import { sounds } from './sound.js';
+import { bindCameraKeys } from './camera-keys.js';
 import { Engine, defaultEngineSettings } from './kairos.js';
 import { Analysis } from './analysis.js';
 import { Play } from './play.js';
@@ -64,8 +66,10 @@ function setTheme(t) {
 }
 
 function bindKeys() {
+  bindCameraKeys(app.board, () => ['analysis', 'play'].includes(app.route)
+    || (app.route === 'editor' && app.pages.editor.tool === 'move'));
   document.addEventListener('keydown', (e) => {
-    if (e.target.closest('input, textarea, select, dialog') || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.defaultPrevented || e.target.closest('input, textarea, select, dialog, [contenteditable]') || document.querySelector('dialog[open]') || e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key;
     // The editor's keys come first: its piece letters include P (pawn).
     if (app.route === 'editor' && app.pages.editor.key(e)) { e.preventDefault(); return; }
@@ -116,6 +120,7 @@ function rulesPage() {
 }
 
 async function main() {
+  sounds.init($('#btn-sound'));
   app.board = new MultiverseView($('#board'));
   app.input = new MoveInput(app.board);
   app.board.onHover = (sq) => {

@@ -33,6 +33,7 @@
     <a href="#/rules" data-route="rules">Rules</a>
   </nav>
   <div class="site-actions">
+    <button class="icon-btn" id="btn-sound" title="Mute sounds" aria-label="Sound effects" aria-pressed="true"><svg><use href="#i-sound"/></svg></button>
     <button class="icon-btn" id="btn-board-theme" title="Board colours" aria-label="Board colours"><svg><use href="#i-palette"/></svg></button>
     <button class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg><use href="#i-keyboard"/></svg></button>
     <button class="icon-btn" id="btn-theme" title="Light / dark" aria-label="Toggle light or dark theme"><svg class="only-light"><use href="#i-moon"/></svg><svg class="only-dark"><use href="#i-sun"/></svg></button>
@@ -145,10 +146,16 @@
         </div>
 
         <div class="side-links">
-          <button class="link-btn" id="btn-load" title="Load a game (L)"><svg><use href="#i-upload"/></svg>Load game</button>
-          <button class="link-btn" id="btn-export"><svg><use href="#i-share"/></svg>Export</button>
+          <button class="link-btn continue-btn" id="btn-play-position" title="Play Kairos from the position shown"><svg><use href="#i-play"/></svg>Play from here</button>
           <button class="link-btn" id="btn-save" title="Save this game and its analysis to Your games"><svg><use href="#i-save"/></svg>Save</button>
-          <button class="link-btn" id="btn-edit" title="Open this position in the board editor"><svg><use href="#i-edit"/></svg>Edit</button>
+          <details class="analysis-actions" id="analysis-actions">
+            <summary class="link-btn" aria-label="More analysis actions">More <span aria-hidden="true">···</span></summary>
+            <div class="analysis-actions-list" aria-label="Analysis actions">
+              <button class="link-btn" id="btn-load" title="Load a game (L)"><svg><use href="#i-upload"/></svg>Load game</button>
+              <button class="link-btn" id="btn-export"><svg><use href="#i-share"/></svg>Export game</button>
+              <button class="link-btn" id="btn-edit" title="Open this position in the board editor"><svg><use href="#i-edit"/></svg>Edit position</button>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -430,6 +437,7 @@
       <tr><td><kbd>L</kbd></td><td>Load a game</td></tr>
       <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd> / <kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Load a game or position from the clipboard / copy the position</td></tr>
       <tr><td>Drag, wheel, pinch</td><td>Pan and zoom</td></tr>
+      <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Pan up / left / down / right (hold to move; Shift for 3× speed)</td></tr>
       <tr><td>Right-drag / right-click</td><td>Draw an arrow / mark a square (again to remove one; a left click clears all)</td></tr>
       <tr><td><kbd>Ctrl</kbd>+right-click, then right-click</td><td>Draw an arrow between any two squares</td></tr>
       <tr><td>Click a <b>!</b> beside a board</td><td>Show the check you would be in there</td></tr>
@@ -440,6 +448,7 @@
     <h3 class="keys-head">Board editor</h3>
     <table class="keys">
       <tr><td><kbd>K</kbd> <kbd>Q</kbd> <kbd>R</kbd> <kbd>B</kbd> <kbd>N</kbd> <kbd>P</kbd> …</td><td>Place that piece: a letter for Black, Shift+letter for White (also U D S W C Y)</td></tr>
+      <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Pan only in the Move tool; Shift pans faster. Other tools use piece shortcuts.</td></tr>
       <tr><td><kbd>Esc</kbd> <kbd>T</kbd> <kbd>X</kbd> <kbd>O</kbd></td><td>Move, Boards, Erase, Unmoved tool</td></tr>
       <tr><td>Right-click</td><td>Swap the colour of the piece being placed</td></tr>
       <tr><td>Click a timeline's label</td><td>Select its boards; Shift adds to the selection</td></tr>
@@ -500,6 +509,8 @@
 <!-- ============================== Icons (after Lucide, ISC licence; see icons/LICENSE.txt) -->
 <svg width="0" height="0" style="position:absolute;left:0;top:0;overflow:hidden" aria-hidden="true">
   <defs>
+    <symbol id="i-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4 6 8H3v8h3l5 4Z"/><path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4 6 8H3v8h3l5 4ZM16 9l6 6m0-6-6 6"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
     <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 12h18M12 3v18"/><rect x="3" y="3" width="9" height="9" fill="currentColor" stroke="none" opacity=".6"/><rect x="12" y="12" width="9" height="9" fill="currentColor" stroke="none" opacity=".6"/></symbol>

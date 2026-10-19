@@ -354,6 +354,14 @@ textarea { width: 100%; height: 180px; padding: var(--s2); font: 12.5px/1.5 var(
 .link-btn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: var(--s1) var(--s2); border-radius: var(--r-sm); color: var(--muted); font-size: 13px; }
 .link-btn svg { width: 15px; height: 15px; }
 .link-btn:hover { color: var(--strong); background: var(--hover); }
+.side-links .continue-btn { color: var(--accent); margin-right: auto; }
+.analysis-actions { position: relative; }
+.analysis-actions summary { list-style: none; cursor: pointer; }
+.analysis-actions summary::-webkit-details-marker { display: none; }
+.analysis-actions summary span { font-size: 18px; line-height: 1; }
+.analysis-actions[open] summary { color: var(--strong); background: var(--hover); }
+.analysis-actions-list { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 20; min-width: 180px; padding: 5px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--panel); box-shadow: var(--shadow); }
+.analysis-actions-list .link-btn { width: 100%; padding: 10px 12px; white-space: nowrap; }
 /* Variant picker (as infinitechess.org's analysis sidebar): a button showing the variant;
    it opens the groups, and a group its variants. */
 .variant-setup { display: flex; flex-direction: column; gap: 6px; padding: var(--s2) 10px; overflow: visible; position: relative; z-index: 5; }

@@ -2,6 +2,8 @@
 // book and engine actions, the recorded eval graph and live engine analysis.
 import { Rules, parseInfo, threadsSupported } from './kairos.js';
 import { VariantPicker } from './variant-picker.js';
+import { sounds } from './sound.js';
+import { positionFromView } from './position.js';
 import { apiGet } from './static-api.js';
 import { getGame, saveGame, putGame, recordLine } from './history.js';
 import { $, $$, el, toast, fmtScore, fmtNodes, winChance, recordScore, parseLan, store, confirmDialog } from './util.js';
@@ -249,9 +251,12 @@ export class Analysis {
   // ---------------------------------------------------------------- navigation
   goto(id, { follow = true } = {}) {
     if (id == null || !this.tree.nodes[id] || (id === this.cur && !this.input.active)) return;
+    const forward = this.node(id).ply > this.node(this.cur).ply;
+    const san = this.node(id).san;
     this.cur = id;
     this.input.reset();
     this.show({ follow });
+    if (forward) sounds.action(san);
     this.restartEngine();
   }
   next() { const c = this.node(this.cur).children; if (c.length) this.goto(c[0]); else this.stopAutoplay(); }
@@ -284,6 +289,7 @@ export class Analysis {
     this.cur = r.node;
     this.input.reset();
     this.show();
+    sounds.action(this.node(r.node).san, { move: false });
     this.restartEngine();
   }
 
@@ -301,6 +307,9 @@ export class Analysis {
     this.renderGraph();
     this.renderEngine();
     this.renderBook();
+    const canPlay = !['checkmate', 'stalemate', 'exiled-white', 'exiled-black'].includes(v.status);
+    $('#btn-play-position').disabled = !canPlay;
+    $('#btn-play-position').title = canPlay ? 'Play Kairos from the position shown' : 'The game is already over here';
   }
 
   /**
@@ -853,6 +862,19 @@ export class Analysis {
     // Export dialog.
     $('#btn-export').onclick = () => this.openExport();
     $('#btn-save').onclick = () => this.openSave();
+    $('#btn-play-position').onclick = () => {
+      this.stopAutoplay();
+      // Use the selected node, including its complete move history and timelines.
+      const position = positionFromView(this.rules.call({ cmd: 'view', node: this.cur, draft: [] }).view);
+      location.hash = '#/play?position=' + encodeURIComponent(position);
+    };
+    const actions = $('#analysis-actions');
+    actions.addEventListener('click', (event) => { if (event.target.closest('button')) actions.open = false; });
+    document.addEventListener('click', (event) => { if (!actions.contains(event.target)) actions.open = false; });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && actions.open) { actions.open = false; actions.querySelector('summary').focus(); }
+    });
+    window.addEventListener('hashchange', () => { actions.open = false; });
     $('#save-go').onclick = (e) => { e.preventDefault(); this.saveAnalysis(false); };
     $('#save-copy').onclick = (e) => { e.preventDefault(); this.saveAnalysis(true); };
     $$('#export-kind button').forEach((b) => (b.onclick = () => this.fillExport(b.dataset.v)));
