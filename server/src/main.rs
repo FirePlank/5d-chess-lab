@@ -749,6 +749,10 @@ impl Play {
         let you = viewer.is_some_and(|t| st.session.as_ref().is_some_and(|s| s.token == t));
         let queue_pos = viewer.and_then(|t| st.queue.iter().position(|q| q.ticket == t));
         let busy = st.session.as_ref().is_some_and(|s| s.over.is_none() || st.queue.is_empty() || s.ended_at.is_some_and(|e| e.elapsed().as_secs() < REMATCH_TIMEOUT));
+        // One viewer can hold several streams (a reload leaves the old one until its next
+        // failed write), so count distinct tokens; tokenless streams count one each.
+        let named: std::collections::HashSet<_> = st.subscribers.iter().filter_map(|(_, _, t)| t.as_deref()).collect();
+        let spectators = named.len() + st.subscribers.iter().filter(|(_, _, t)| t.is_none()).count();
         obj![
             ("ok", true),
             ("busy", st.session.is_some()),
@@ -757,7 +761,7 @@ impl Play {
             ("queue", st.queue.len()),
             ("queuePos", queue_pos),
             ("canStart", Self::can_start(st, viewer)),
-            ("spectators", st.subscribers.len()),
+            ("spectators", spectators),
             ("game", game),
             ("version", st.version)
         ]

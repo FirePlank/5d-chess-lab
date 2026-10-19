@@ -191,7 +191,7 @@ export class Play {
     }
     this.input.attach(this.source);
     if (this.local) this.local.resume();
-    else this.connect();
+    else this.ensureStream();
     if (this.previewable()) this.preview();
     else this.show();
   }
@@ -202,6 +202,9 @@ export class Play {
 
   connect() {
     if (this.es) return;
+    // The stream is personalised by this token (it decides `you`), so remember which one it
+    // was opened with: a later token must reopen it, or every event would say `you: false`.
+    this.esToken = this.token || null;
     const url = 'api/play/events' + (this.token ? `?token=${encodeURIComponent(this.token)}` : '');
     this.es = new EventSource(url);
     this.es.addEventListener('state', (e) => this.onState(JSON.parse(e.data)));
@@ -215,6 +218,12 @@ export class Play {
     if (this.es) this.es.close();
     this.es = null;
     this.connect();
+  }
+  /** Reopen the stream when the token changed under it (gaining, losing or swapping one). */
+  ensureStream() {
+    if (this.local) return;
+    if (!this.es) return this.connect();
+    if ((this.esToken || null) !== (this.token || null)) this.reconnect();
   }
 
   async post(what, body = {}) {
@@ -235,8 +244,8 @@ export class Play {
       if (j.token && j.token !== this.token) {
         this.token = j.token;
         store('play.token', this.token);
-        this.reconnect();
       }
+      this.ensureStream();
       this.onState(j);
       return j;
     } catch (e) {
@@ -471,11 +480,17 @@ export class Play {
     } else if (watching) {
       $('#play-queue-text').textContent = s.queue ? `${s.queue} waiting. You can watch the game live, or join the queue.` : 'You can watch the game live. Join the queue to play next.';
     }
-    const showForm = !s || s.canStart || (!live && !watching);
+    // A finished game that is not yours must still offer the setup, even before the owner's
+    // rematch window runs out: otherwise New game (yours only) and the form are both hidden
+    // and the panel dead-ends with no way to start.
+    const over = live && !!g.over;
+    const showForm = !s || s.canStart || (!live && !watching) || (over && !mine);
     // Your finished game stays on screen (result, moves, Analyse); the setup comes back with
     // New game, so the two never crowd the panel together.
     $('#play-form').classList.toggle('hidden', !(showForm && (!mine || !g || this.wantSetup)));
-    $('#play-start').disabled = !!(s && !s.canStart);
+    // Once a game is over the server is the authority on who may start (it answers "busy"):
+    // never leave Start dead on a finished game, or a stale `canStart` locks the page.
+    $('#play-start').disabled = !!(s && !s.canStart && !over);
     $('#play-setup').classList.toggle('hidden', $('#play-form').classList.contains('hidden') && $('#play-busy').classList.contains('hidden'));
     $('#play-live').classList.toggle('hidden', !live || (mine && this.wantSetup && g.over));
     $('#play-spectators').textContent = s && s.spectators > 1 ? `${s.spectators - 1} watching` : '';
