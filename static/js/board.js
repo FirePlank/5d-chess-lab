@@ -995,33 +995,38 @@ export class MultiverseView {
       if (!tl) continue;
       const vv = 2 * tl.end[0] + tl.end[1];
       const [sx, sy] = this.toScreen(this.boardX(vv) + this.bw, this.boardTop(l, vv));
-      const r = 9, x = sx + 4, y = sy - 4;
+      // Keep the original offset, but grow enough to cover the outer corner.
+      const scale = Math.max(6, Math.min(14, this.cam.s * 0.3)) / 9;
+      const corner = Math.max(0.12, Math.min(0.3, 4 / this.cam.s)) * this.cam.s + 3;
+      const x = sx + 4 * scale, y = sy - 4 * scale;
+      const r = Math.max(9 * scale, Math.SQRT2 * Math.abs(corner - 4 * scale) + 1);
+      const badgeScale = r / 9;
       if (x < -r || y < -r || x > this.w + r || y > this.h + r) continue;
       this.badges.push({ l, x, y, r });
       const on = this.revealed.has(l), hover = this.hoverBadge === l;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,.45)';
-      ctx.shadowBlur = 4;
+      ctx.shadowBlur = 4 * badgeScale;
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fillStyle = hover ? 'rgb(92,135,95)' : on ? 'rgb(150,70,52)' : 'rgb(212,105,80)';
       ctx.fill();
       ctx.shadowColor = 'transparent';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 * badgeScale;
       ctx.strokeStyle = hover ? 'rgb(70,110,74)' : 'rgb(184,84,61)';
       ctx.stroke();
       ctx.fillStyle = '#fff';
-      ctx.font = `bold 13px ${this.colors.font}`;
+      ctx.font = `bold ${13 * badgeScale}px ${this.colors.font}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('!', x, y + 0.5);
+      ctx.fillText('!', x, y + 0.5 * badgeScale);
       ctx.restore();
     }
   }
 
   /** The "!" badge at screen point (x, y), if any. */
   badgeAt(x, y) {
-    const b = this.badges.find((b) => Math.hypot(b.x - x, b.y - y) <= b.r + 3);
+    const b = this.badges.find((b) => Math.hypot(b.x - x, b.y - y) <= b.r * 4 / 3);
     return b ? b.l : null;
   }
 

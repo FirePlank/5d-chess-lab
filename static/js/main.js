@@ -10,7 +10,7 @@ import { Play } from './play.js';
 import { Games } from './games.js';
 import { Editor } from './editor.js';
 import { setRules } from './static-api.js';
-import { $, $$, toast, store } from './util.js';
+import { $, $$, toast, store, bindDialogDismiss } from './util.js';
 
 /** Saved analysis-engine settings over the defaults. */
 export function engineSettings() {
@@ -120,6 +120,7 @@ function rulesPage() {
 }
 
 async function main() {
+  bindDialogDismiss();
   sounds.init($('#btn-sound'));
   app.board = new MultiverseView($('#board'));
   app.input = new MoveInput(app.board);

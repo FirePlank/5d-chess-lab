@@ -3,6 +3,26 @@
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+/** Dismiss dialogs on backdrop clicks, without dismissing a drag started inside. */
+export function bindDialogDismiss() {
+  for (const dialog of $$('dialog.modal')) {
+    let startedOutside = false;
+    const outside = (event) => {
+      const bounds = dialog.getBoundingClientRect();
+      return event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right
+        || event.clientY < bounds.top || event.clientY > bounds.bottom);
+    };
+    dialog.addEventListener('pointerdown', (event) => { startedOutside = event.button === 0 && outside(event); });
+    dialog.addEventListener('pointercancel', () => { startedOutside = false; });
+    dialog.addEventListener('close', () => { startedOutside = false; });
+    dialog.addEventListener('click', (event) => {
+      const dismiss = startedOutside && outside(event);
+      startedOutside = false;
+      if (dialog.open && dismiss && dialog.dispatchEvent(new Event('cancel', { cancelable: true }))) dialog.close('cancel');
+    });
+  }
+}
+
 export function el(tag, attrs = {}, ...children) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -43,7 +63,6 @@ export function confirmDialog(title, { text = '', ok = 'OK', danger = false } = 
       [btn, 'click', (e) => { e.preventDefault(); done(true); }],
       [$('#confirm-cancel'), 'click', (e) => { e.preventDefault(); done(false); }],
       [dlg, 'cancel', (e) => { e.preventDefault(); done(false); }],
-      [dlg, 'click', (e) => { if (e.target === dlg) done(false); }],
     ];
     const done = (v) => {
       for (const [node, ev, fn] of handlers) node.removeEventListener(ev, fn);
