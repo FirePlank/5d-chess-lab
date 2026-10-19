@@ -6,6 +6,7 @@ import { Rules } from './kairos.js';
 import { VariantPicker } from './variant-picker.js';
 import { sounds } from './sound.js';
 import { openingAt, renderOpening, openingLink } from './opening.js';
+import { bookVariants } from './opening-tree.js';
 import { LocalPlay } from './local-play.js';
 import { saveGame } from './history.js';
 import { lanText } from './input.js';
@@ -80,6 +81,7 @@ export class Play {
     // One player at a time is the server's rule (one engine); here everyone plays their own.
     $('#play-fine').classList.toggle('hidden', !this.app.server);
     const variants = this.rules.call({ cmd: 'variants' }).variants;
+    this.bookStarts = bookVariants(this.rules, variants).map(v => v.name);
     const saved = store('play.variant.t0') || 'Standard - Turn Zero';
     this.variantPicker = new VariantPicker($('#play-variant'), {
       variants,
@@ -162,6 +164,10 @@ export class Play {
     try {
       const r = this.rules.call({ cmd: 'new', position: this.startPosition() });
       this.tree = r.tree;
+      const hasBook = this.variantPicker.value === '__custom'
+        ? this.rules.call({ cmd: 'book', node: 0 }).moves.length > 0
+        : this.bookStarts.includes(this.variantPicker.value);
+      $('#play-book').closest('.book-row').classList.toggle('hidden', !hasBook);
     } catch (e) {
       toast(e.message, { error: true });
       return;
