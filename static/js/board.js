@@ -380,6 +380,9 @@ export class MultiverseView {
    */
   followAction() {
     const v = this.view;
+    // While an action is being built the camera stays where the player put it: following each
+    // move would zoom out to fit the boards it will make, before it is even submitted.
+    if (v.draft && v.draft.length) return;
     const made = [];
     for (const m of [...(v.last || []), ...(v.draft || [])]) {
       const c = m.c ?? v.player;
