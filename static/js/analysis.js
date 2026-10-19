@@ -594,6 +594,17 @@ export class Analysis {
     this.renderEngine();
   }
 
+  publishPv(s) {
+    const next = s.pvSet;
+    if (!next) return;
+    s.pvSet = null;
+    const prev = this.cache.get(s.node);
+    if (!prev || next.depth >= prev.depth || s.regress) {
+      this.cache.set(s.node, next);
+      if (prev && next.depth >= prev.depth) s.regress = false;
+    }
+  }
+
   onEngine(m) {
     if (m.type === 'ready') return this.renderEngine();
     const s = this.searching;
@@ -605,21 +616,19 @@ export class Analysis {
       if (info.depth == null || (info.cp == null && info.mate == null) || !info.pv) return;
       // MultiPV: `multipv k` numbers the lines (1 the best); without it there is one line.
       const k = info.multipv || 1;
-      const prev = this.cache.get(s.node);
-      // Line 1 starts a depth's set of lines; the others join the set of their own depth (the
-      // lines of one depth arrive together, line 1 first). A shallower set than the cached one
-      // is kept only right after Lines was raised (`regress`), until the search is as deep.
+      // Keep the last depth visible until the next MultiPV set is complete. Updating one
+      // rank at a time briefly hides rows (and can duplicate actions when rankings swap).
       if (k === 1) {
-        if (!prev || info.depth >= prev.depth || s.regress) {
-          this.cache.set(s.node, { ...info, lines: [{ ...info }], multiPv: s.multiPv || 1, at: performance.now() });
-          if (prev && info.depth >= prev.depth) s.regress = false;
-        }
-      } else if (prev && prev.depth === info.depth && k <= MAX_LINES) {
-        prev.lines = prev.lines || [prev];
-        prev.lines[k - 1] = { ...info };
+        // Fewer legal alternatives than requested may produce a shorter set.
+        this.publishPv(s);
+        s.pvSet = { ...info, lines: [{ ...info }], multiPv: s.multiPv || 1, at: performance.now() };
+      } else if (s.pvSet && s.pvSet.depth === info.depth && k <= MAX_LINES) {
+        s.pvSet.lines[k - 1] = { ...info };
       }
+      if (s.pvSet && s.pvSet.lines.filter(Boolean).length >= (s.multiPv || 1)) this.publishPv(s);
       this.scheduleRender();
     } else if (m.type === 'done') {
+      this.publishPv(s);
       const c = this.cache.get(s.node);
       if (c) c.done = true;
       this.searching = { ...s, finished: true };
