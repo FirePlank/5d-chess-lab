@@ -1,7 +1,8 @@
 # 5D Chess Lab on GitHub Pages: the browser build of the Kairos core, checked, assembled with
 # scripts/build_pages.sh and deployed.
 #
-# - A push to main deploys the site with the engine commit Cargo.lock pins.
+# - A push to main deploys the site, with the engine's latest commit (the pin moves first, as
+#   below) when there is a newer one.
 # - When the engine changes (a repository_dispatch from the engine repository, or the hourly
 #   check, which stops at once when the pin is current), the pin first moves to the engine's
 #   latest commit; the new Cargo.lock is committed ("Engine abc1234") only once the build and
@@ -46,14 +47,14 @@ jobs:
           latest=$(git ls-remote "https://github.com/$ENGINE_REPO" refs/heads/main | cut -f1)
           echo "pinned $pinned, engine main $latest"
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
-          if [ "$GITHUB_EVENT_NAME" = push ] || [ -z "$latest" ]; then
+          if [ -z "$latest" ]; then
             echo "update=false" >> "$GITHUB_OUTPUT"
           elif [ "$pinned" != "$latest" ]; then
             echo "update=true" >> "$GITHUB_OUTPUT"
           else
             echo "update=false" >> "$GITHUB_OUTPUT"
-            # Nothing new from the engine: only a manual run rebuilds anyway.
-            [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || echo "skip=true" >> "$GITHUB_OUTPUT"
+            # Nothing new from the engine: only a push or a manual run rebuilds anyway.
+            case "$GITHUB_EVENT_NAME" in push|workflow_dispatch) ;; *) echo "skip=true" >> "$GITHUB_OUTPUT" ;; esac
           fi
 
       - name: Rust with the wasm32-wasip1-threads target
