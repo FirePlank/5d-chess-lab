@@ -102,11 +102,11 @@ export class Play {
       const level = i + 1;
       return el('label', { title: level === 8 ? 'Level 8 · Full strength' : `Level ${level}` },
         el('input', { type: 'radio', name: 'skill', value: level, checked: level === this.skillLevel, 'aria-label': `Level ${level}`,
-          onchange: () => { this.skillLevel = level; store('play.skill', level); this.updateBookControl(); } }),
+          onchange: () => { this.skillLevel = level; store('play.skill', level); } }),
         el('span', { text: level }));
     }));
     $('#play-book').onchange = () => store('play.book', $('#play-book').checked);
-    this.updateBookControl();
+    $('#play-book').checked = store('play.book') !== false;
     $('#play-form').onsubmit = (e) => { e.preventDefault(); this.start(); };
     $('#play-resign').onclick = async () => {
       if (await confirmDialog('Resign this game?', { text: 'Kairos wins the game.', ok: 'Resign', danger: true })) this.post('resign').catch(() => {});
@@ -269,10 +269,6 @@ export class Play {
     const t = this.timeControl();
     $('#tc-desc').textContent = this.tc.id === 'custom' ? clockText(t.clock) : '';
     $('#play-tc').title = t.clock ? clockText(t.clock) : `${t.movetime / 1000} seconds per move`;
-  }
-
-  updateBookControl() {
-    $('#play-book').checked = store('play.book') ?? this.skillLevel >= 5;
   }
 
   /** The chosen time control as the start request takes it: {clock (ms) | null, movetime}. */
