@@ -4,9 +4,11 @@ import { MultiverseView } from './board.js';
 import { MoveInput } from './input.js';
 import { sounds } from './sound.js';
 import { bindCameraKeys } from './camera-keys.js';
+import { bindSiteNav } from './site-nav.js';
 import { Engine, defaultEngineSettings } from './kairos.js';
 import { Analysis } from './analysis.js';
 import { Play } from './play.js';
+import { Openings } from './openings.js';
 import { Games } from './games.js';
 import { Editor } from './editor.js';
 import { setRules } from './static-api.js';
@@ -39,7 +41,7 @@ async function serverInfo() {
 function route() {
   const hash = location.hash || '#/analysis';
   const [path, qs] = hash.slice(2).split('?');
-  const name = ['analysis', 'play', 'editor', 'games', 'rules'].includes(path) ? path : 'analysis';
+  const name = ['analysis', 'play', 'editor', 'games', 'rules', 'openings'].includes(path) ? path : 'analysis';
   const params = new URLSearchParams(qs || '');
   if (app.route !== name) {
     const prev = app.pages[app.route];
@@ -47,7 +49,8 @@ function route() {
   }
   app.route = name;
   $$('.site-nav a').forEach((a) => a.classList.toggle('on', a.dataset.route === name));
-  $('#workspace').classList.toggle('hidden', name === 'games' || name === 'rules');
+  $('#workspace').classList.toggle('hidden', name === 'games' || name === 'rules' || name === 'openings');
+  $('#openings').classList.toggle('hidden', name !== 'openings');
   $('#rules').classList.toggle('hidden', name !== 'rules');
   $('#browser').classList.toggle('hidden', name !== 'games');
   $('#side-analysis').classList.toggle('hidden', name !== 'analysis');
@@ -120,6 +123,7 @@ function rulesPage() {
 }
 
 async function main() {
+  bindSiteNav();
   bindDialogDismiss();
   sounds.init($('#btn-sound'));
   app.board = new MultiverseView($('#board'));
@@ -169,7 +173,7 @@ async function main() {
   });
 
   app.server = await serverInfo();
-  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), rules: rulesPage() };
+  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), rules: rulesPage() };
   try {
     await app.pages.analysis.init();
     setRules(app.pages.analysis.rules);

@@ -16,6 +16,11 @@ an unofficial fan project, not affiliated with Thunkspace.
   you can promote, reorder, comment and save.
 - **Play**: play Kairos on any built-in variant or a position from analysis or the editor, as either side,
   with a clock (increment and per-timeline delay) or a fixed think time.
+- **Openings**: recognized opening names above the move list in Analysis and Play, retained
+  after leaving theory and kept with saved games and exports. Classification follows the
+  selected variation and works even with engine opening-book play switched off. Browse the
+  book on the Openings page through position cards and move breadcrumbs, then analyse or
+  play any position. The flat variant selector includes only starts with book moves.
 - **Editor**: set up any position: place, move and remove pieces on any board, add boards and
   timelines, select, drag, copy and paste boards and whole timelines, mark unmoved kings, rooks,
   pawns and brawns, and set the board size, odd/even timelines and promotion pieces. The rules
@@ -68,6 +73,7 @@ git checkout Cargo.lock   # afterwards: the override rewrites the pin
 node tests/smoke.mjs                        # load, view and search through the browser build
 node tests/sound.mjs                        # sound events, notation and live-update deduplication
 node tests/navigation.mjs                   # WASD panning and analysis position transfer
+node tests/openings.mjs                     # named openings, variations and saved-game export
 node tests/records.mjs games/sprt/*.jsonl   # replay records: actions, book and eval tags, results
 node tests/pgn_corpus.mjs <dir>             # load every 5dpgn file under a directory
 ```

@@ -20,10 +20,11 @@ function chevron(points, className) {
 
 /** The grouped variant picker shared by Analysis and Play; each owns its selection. */
 export class VariantPicker {
-  constructor(root, { variants, value = null, onChange }) {
+  constructor(root, { variants, value = null, onChange, flat = false }) {
     this.root = root;
     this.variants = variants;
     this.onChange = onChange;
+    this.flat = flat;
     this.groups = [];
     for (const variant of variants) {
       const [name, ...rest] = variant.name.split(' - ');
@@ -79,6 +80,14 @@ export class VariantPicker {
   }
 
   showGroups() {
+    if (this.flat) {
+      this.menu.replaceChildren(...this.variants.map(variant => el('button', {
+        type: 'button', class: 'variant-item' + (variant.name === this.value ? ' on' : ''),
+        role: 'menuitem', text: variant.name, onclick: () => this.choose(variant.name),
+      })));
+      this.menu.scrollTop = 0;
+      return;
+    }
     const custom = this.custom ? el('button', {
       type: 'button', class: 'variant-item' + (this.value === this.custom.value ? ' on' : ''), role: 'menuitem',
       text: this.custom.label, onclick: () => this.choose(this.custom.value),

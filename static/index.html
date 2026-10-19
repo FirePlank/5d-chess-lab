@@ -23,13 +23,15 @@
 </head>
 <body>
 <header class="site-header">
+  <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Navigation menu" aria-controls="site-nav" aria-expanded="false"><span aria-hidden="true"></span></button>
   <a class="site-logo" href="#/analysis" aria-label="5D Chess Lab home"><span class="logo-5d">5D</span><span class="logo-name">Chess Lab</span></a>
   <a class="build hidden" id="build" target="_blank" rel="noopener"></a>
-  <nav class="site-nav" aria-label="Sections">
+  <nav class="site-nav" id="site-nav" aria-label="Sections">
     <a href="#/analysis" data-route="analysis">Analysis</a>
     <a href="#/play" data-route="play">Play</a>
     <a href="#/editor" data-route="editor">Editor</a>
     <a href="#/games" data-route="games">Games</a>
+    <a href="#/openings" data-route="openings">Openings</a>
     <a href="#/rules" data-route="rules">Rules</a>
   </nav>
   <div class="site-actions">
@@ -41,6 +43,13 @@
 </header>
 
 <main id="app">
+  <section id="openings" class="openings hidden" aria-label="Opening explorer">
+    <div class="openings-page">
+      <div class="openings-toolbar"><a href="#/openings" class="openings-home">Opening book</a><div class="variant-selector" id="opening-variant"></div></div>
+      <div id="opening-error" role="alert"></div>
+      <div id="opening-content"></div>
+    </div>
+  </section>
   <!-- ============================== Board workspace (Analysis and Play) -->
   <section class="workspace" id="workspace">
     <div class="board-area" id="board-area">
@@ -134,6 +143,7 @@
         </div>
 
         <div class="panel moves-panel">
+          <div class="opening-label hidden" id="analysis-opening" aria-label="Opening"></div>
           <div class="moves" id="moves" tabindex="0" aria-label="Actions"></div>
           <div class="graph-wrap" id="graph-wrap"><canvas id="graph" aria-label="Evaluation graph"></canvas></div>
           <div class="controls" role="toolbar" aria-label="Navigate">
@@ -280,6 +290,7 @@
           <div class="player-bar" id="clock-top"><span class="pname" id="clock-top-name">Kairos</span><span class="clock-delay" id="clock-top-delay"></span><span class="clock" id="clock-top-time">-:--</span></div>
           <div class="play-status" id="play-status"></div>
           <div class="tl-line play-tl"></div>
+          <div class="opening-label hidden" id="play-opening" aria-label="Opening"></div>
           <div class="moves play-moves" id="play-moves"></div>
           <div class="thinking" id="play-thinking"></div>
           <div class="play-actions">

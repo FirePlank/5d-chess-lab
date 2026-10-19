@@ -5,6 +5,7 @@
 import { Rules } from './kairos.js';
 import { VariantPicker } from './variant-picker.js';
 import { sounds } from './sound.js';
+import { openingAt, renderOpening, openingLink } from './opening.js';
 import { LocalPlay } from './local-play.js';
 import { saveGame } from './history.js';
 import { lanText } from './input.js';
@@ -450,6 +451,7 @@ export class Play {
       clock: g.clock || null,
       movetime: g.clock ? null : g.movetime,
       openingBook: g.book !== false,
+      opening: openingAt(this.rules, this.lastNode())?.name || null,
       skillLevel: g.skillLevel || 8,
       engine,
     };
@@ -534,6 +536,8 @@ export class Play {
   }
 
   onView(v) {
+    const opening = openingAt(this.rules, this.cur);
+    renderOpening($('#play-opening'), opening, openingLink(this.tree, opening, this.app.pages.analysis.variants));
     const chip = $('#status-chip');
     chip.className = 'status-line';
     const g = this.state && this.state.game;

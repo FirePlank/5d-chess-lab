@@ -112,6 +112,7 @@ export function recordLine(g) {
     actions: g.moves.length,
     timeControl: g.timeControl,
     openingBook: g.openingBook,
+    opening: g.opening || undefined,
     skillLevel: g.skillLevel,
     engine: g.engine,
     started: Math.round((g.started || 0) / 1000),

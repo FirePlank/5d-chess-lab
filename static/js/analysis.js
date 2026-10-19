@@ -4,6 +4,7 @@ import { Rules, parseInfo, threadsSupported } from './kairos.js';
 import { VariantPicker } from './variant-picker.js';
 import { sounds } from './sound.js';
 import { positionFromView } from './position.js';
+import { openingAt, renderOpening, openingLink } from './opening.js';
 import { apiGet } from './static-api.js';
 import { getGame, saveGame, putGame, recordLine } from './history.js';
 import { $, $$, el, toast, fmtScore, fmtNodes, winChance, recordScore, parseLan, store, confirmDialog } from './util.js';
@@ -318,8 +319,9 @@ export class Analysis {
    */
   renderBook() {
     const box = $('#book-hint');
-    let moves = [];
-    try { moves = this.rules.call({ cmd: 'book', node: this.cur }).moves; } catch (e) { moves = []; }
+    let moves = [], opening = null;
+    try { ({ moves, opening } = this.rules.call({ cmd: 'book', node: this.cur })); } catch (e) { /* No theory here. */ }
+    renderOpening($('#analysis-opening'), opening, openingLink(this.tree, opening, this.variants));
     box.classList.toggle('hidden', !moves.length);
     box.replaceChildren(...(moves.length ? [el('span', { class: 'book-label', text: 'Book' })] : []), ...moves.map((m) => {
       const title = m.play ? `Opening theory (weight ${m.weight})` : 'Known theory, not recommended';
@@ -988,6 +990,7 @@ export class Analysis {
       white: $('#save-white').value.trim() || 'White',
       black: $('#save-black').value.trim() || 'Black',
       variant: m.variant || null,
+      opening: openingAt(this.rules, this.mainline().at(-1))?.name || null,
       position: this.rules.call({ cmd: 'view', node: 0, draft: [] }).view.position,
       moves: this.mainline().slice(1).map((id) => this.node(id).lan),
       result: m.result || (existing && existing.result) || null,
@@ -1001,7 +1004,7 @@ export class Analysis {
     };
     // A game you played keeps its record (what was played, how it ended); the analysis goes on top.
     if (existing && existing.kind === 'played') {
-      for (const k of ['variant', 'position', 'moves', 'result', 'reason', 'base', 'basePosition']) delete rec[k];
+      for (const k of ['variant', 'position', 'moves', 'result', 'reason', 'base', 'basePosition', 'opening']) delete rec[k];
     }
     try {
       let id;
@@ -1192,6 +1195,8 @@ export class Analysis {
       if (this.meta.white && this.meta.white !== 'White') headers.push(['White', this.meta.white]);
       if (this.meta.black && this.meta.black !== 'Black') headers.push(['Black', this.meta.black]);
       if (this.meta.result) headers.push(['Result', this.meta.result]);
+      const opening = openingAt(this.rules, this.cur);
+      if (opening) headers.push(['Opening', opening.name]);
       const r = this.rules.call({ cmd: 'export', node: this.cur, headers });
       if (kind === 'pgn') text = r.pgn;
       else if (kind === 'uci') text = 'position ' + r.uci;

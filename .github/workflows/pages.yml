@@ -93,6 +93,7 @@ jobs:
           node tests/sound.mjs
           node tests/navigation.mjs
           node tests/pv.mjs
+          node tests/openings.mjs
           node tests/records.mjs games/sprt/*.jsonl games/match/*.jsonl
 
       - name: Commit the new engine pin
