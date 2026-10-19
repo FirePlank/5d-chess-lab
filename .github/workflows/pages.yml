@@ -3,7 +3,7 @@
 #
 # - A push to main deploys the site, with the engine's latest commit (the pin moves first, as
 #   below) when there is a newer one.
-# - When the engine changes (a repository_dispatch from the engine repository, or the hourly
+# - When the engine changes (the engine repository moves the engine-sync tag, or the scheduled
 #   check, which stops at once when the pin is current), the pin first moves to the engine's
 #   latest commit; the new Cargo.lock is committed ("Engine abc1234") only once the build and
 #   the checks pass, and then deployed. A failing engine commit leaves the site as it was.
@@ -13,6 +13,8 @@ name: Pages
 on:
   push:
     branches: [main]
+    # The engine repository moves this tag when the engine changes (its notify-site workflow).
+    tags: [engine-sync]
   repository_dispatch:
     types: [engine-updated]
   schedule:
@@ -39,6 +41,9 @@ jobs:
       deploy: ${{ steps.engine.outputs.skip != 'true' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The engine-sync tag only starts the run; the site is always built from main.
+          ref: main
 
       - name: Is the engine pin current?
         id: engine
