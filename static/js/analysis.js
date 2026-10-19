@@ -585,12 +585,14 @@ export class Analysis {
     // stopped search revisited), it continues from the depth reached instead of from 1; never
     // after a Lines change, whose search has to produce every line.
     const multi = this.lines > 1 ? { multiPV: this.lines } : {};
-    this.engine.search({ position: v.position, depth, movetime: 86_400_000, resume: !restart, ...multi }).then((id) => {
-      if (this.searching && this.searching.node === node) this.searching.id = id;
-    }).catch((e) => {
+    // The search's id is taken by the call itself (`reqId`), so that nothing of an earlier
+    // search, which may still be waiting for the engine, is taken for this one's.
+    const me = this.searching;
+    this.engine.search({ position: v.position, depth, movetime: 86_400_000, resume: !restart, ...multi }).catch((e) => {
       toast('Engine failed to start: ' + e.message, { error: true });
       this.setEngine(false);
     });
+    me.id = this.engine.reqId;
     this.renderEngine();
   }
 

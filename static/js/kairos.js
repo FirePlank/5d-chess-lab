@@ -153,29 +153,45 @@ export class Engine {
   }
 
   /**
-   * Start a search; a running one is stopped first. Returns the request id. On a clock, pass
-   * `timeLeft`/`increment` (ms) and `movetime: null`. `book`: answer a book position from the
-   * opening book at once (the engine's `OwnBook`; Play only).
+   * Start a search; a running one is stopped first. Returns the request id, which is `reqId`
+   * from the moment of the call (a caller that needs it at once reads it there): ids are taken
+   * in the order of calls, before the engine is ready, and a search that another search or a
+   * `stop` came after while it waited never runs. (An id taken only once the engine was ready
+   * let the output of the earlier search, say of the start position of a page still loading, be
+   * taken for the later one's.) On a clock, pass `timeLeft`/`increment` (ms) and
+   * `movetime: null`. `book`: answer a book position from the opening book at once (the
+   * engine's `OwnBook`; Play only).
    */
   async search({ position, movetime = 86_400_000, depth, newGame = false, resume = false, timeLeft, increment, delay, delayPerTimeline, book = false, multiPV, skillLevel = 8 }) {
-    await this.start();
-    this.stop();
     const id = ++this.reqId;
+    await this.start();
+    if (id !== this.reqId) return id; // superseded while the engine started
+    if (this.busy) {
+      this.interruptRunning();
+      // Without shared memory the worker was replaced.
+      await this.start();
+      if (id !== this.reqId) return id;
+    }
     this.busy = true;
+    this.runningId = id;
     this.worker.postMessage({ type: 'search', id, position, movetime, depth, newGame, resume, timeLeft, increment, delay, delayPerTimeline, book, multiPV, skillLevel });
     return id;
   }
 
+  /** Stop the running search (its output is dropped from now on) and any waiting to start. */
   stop() {
-    if (!this.busy) return;
+    if (this.busy) this.interruptRunning();
+    this.reqId++;
+  }
+
+  interruptRunning() {
     if (this.clock) {
-      stopClock(this.clock, this.reqId);
+      stopClock(this.clock, this.runningId);
     } else {
       // No shared memory: a search cannot be interrupted, so replace the worker.
       this.restart();
     }
     this.busy = false;
-    this.reqId++;
   }
 
   restart() {
