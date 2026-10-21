@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "kairos"
 version = "0.1.0"
-source = "git+https://github.com/FirePlank/5d-chess-engine?branch=main#1f109900dd262168feee8b99878fcdc40ae8df90"
+source = "git+https://github.com/FirePlank/5d-chess-engine?branch=main#8147bad0602d7c877f3a27f4c7272f21c833340b"
 
 [[package]]
 name = "kairos-wasm"
