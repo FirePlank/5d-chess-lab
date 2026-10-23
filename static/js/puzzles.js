@@ -1,7 +1,7 @@
-// Puzzles, after lichess's puzzle trainer. #/puzzles opens a puzzle at once (around your puzzle
-// rating, in the chosen theme and rating range, one you have not played); #/puzzles/<id> is
-// that puzzle; #/puzzles/themes is the dashboard: your rating, the themes with what is left in
-// each, the filters, and your latest puzzles.
+// Puzzles, after lichess's puzzle trainer. #/puzzles/themes (where the Puzzles tab goes) is the
+// dashboard: your rating, the themes with what is left in each, the filters, and your latest
+// puzzles. #/puzzles?new=1 opens a puzzle at once (around your puzzle rating, in the chosen
+// theme and rating range, one you have not played); #/puzzles/<id> is that puzzle.
 //
 // The puzzles are Kairos's (puzzlegen's site export, in public.puzzles). Each solver step says
 // how its answers are judged: "keys" (any action with all the key moves is right), "list" (only
@@ -186,12 +186,7 @@ export class Puzzles {
       return;
     }
     if (id) this.open(id);
-    else if (this.s && this.s.mode !== 'view' && !params.get('new')) {
-      // Back on Puzzles mid-puzzle: carry on with it.
-      history.replaceState(null, '', `#/puzzles/${this.s.p.id}`);
-      this.orient();
-      this.show();
-    } else this.next({ replace: true });
+    else this.next({ replace: true });
   }
 
   deactivate() {

@@ -67,10 +67,12 @@ function route() {
     params.set('online', id);
     if (color === 'w' || color === 'b') params.set('color', color);
   }
-  // #/puzzles: the next puzzle; #/puzzles/<id>: that one; #/puzzles/themes: the themes.
+  // #/puzzles/themes (and plain #/puzzles): the themes; #/puzzles?new=1: the next puzzle;
+  // #/puzzles/<id>: that one.
   if (head === 'puzzles' && id && id !== 'themes') params.set('id', id);
+  if (head === 'puzzles' && !id && !params.get('new')) history.replaceState(null, '', '#/puzzles/themes');
   let name = PAGES.includes(head) && head !== 'game' && head !== 'play' && head !== 'puzzlethemes' ? head : head === 'game' && id ? 'game' : 'home';
-  if (head === 'puzzles' && id === 'themes') name = 'puzzlethemes';
+  if (head === 'puzzles' && (id === 'themes' || (!id && !params.get('new')))) name = 'puzzlethemes';
   if (app.route !== name) {
     const prev = app.pages[app.route];
     if (prev && prev.deactivate) prev.deactivate();
