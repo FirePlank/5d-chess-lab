@@ -15,6 +15,8 @@
 // wasi-threads `wasi.thread-spawn`; engine-worker.js runs the thread pool behind it.
 
 const ENOSYS = 52;
+// Where a runtime has no performance.timeOrigin (Supabase's edge runtime), the wall clock now.
+const timeOrigin = Number.isFinite(performance.timeOrigin) ? performance.timeOrigin : Date.now() - performance.now();
 const DAY_NS = 86_400_000_000_000n;
 
 /** A new shared clock/stop state for one engine (null without SharedArrayBuffer). */
@@ -50,7 +52,7 @@ export function makeWasi({ clock = null, onStdout = null } = {}) {
       }
     }
     const off = offset ? Atomics.load(offset, 0) : 0n;
-    return BigInt(Math.round((performance.timeOrigin + performance.now()) * 1e6)) + off;
+    return BigInt(Math.round((timeOrigin + performance.now()) * 1e6)) + off;
   };
   const decoder = new TextDecoder();
   const lineBuf = { 1: '', 2: '' };
