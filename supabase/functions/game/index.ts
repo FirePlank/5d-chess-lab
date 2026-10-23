@@ -170,7 +170,7 @@ if (import.meta.main) {
     } catch (e) {
       if (e instanceof UserError) return Response.json({ error: 'refused', message: e.message }, { status: 400, headers: CORS });
       console.error(e);
-      return Response.json({ error: 'server', message: 'A server error occurred. Please try again.' }, { status: 500, headers: CORS });
+      return Response.json({ error: 'server', message: 'A server error occurred. Please try again.', detail: String((e as Error).message ?? e).slice(0, 300) }, { status: 500, headers: CORS });
     }
   });
 }
