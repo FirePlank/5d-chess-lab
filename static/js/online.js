@@ -286,14 +286,15 @@ export class OnlineGame {
     $('#challenge').classList.add('hidden');
     $('#workspace').classList.remove('hidden');
     syncClock();
+    // Our side first, so the board is never drawn from the wrong one.
+    this.role = r.role || null;
+    this.orient();
     if (!r.live) {
       this.finished = r.game;
-      this.role = r.role || null;
       this.loadMoves(r.game.position, r.game.moves.map((m) => m.lan));
       this.showGame();
       return;
     }
-    this.role = r.role || null;
     if (this.role) setPresence('game', id);
     this.offs = [live(`game-${id}`, {
       table: 'live_games', filter: `id=eq.${id}`,
@@ -330,13 +331,18 @@ export class OnlineGame {
     this.render();
   }
 
+  /** The board from our side (White's for a spectator), framed afresh. */
+  orient() {
+    // This page's game drives the shared board from here on (not the page shown before).
+    this.input.attach(this.source);
+    this.board.setFlipped(this.role === 2);
+    $('#tool-flip').classList.toggle('on', this.board.flipped);
+    this.board.fitted = false;
+  }
+
   showGame() {
     if (!this.active) return;
     this.input.attach(this.source);
-    const flip = this.role === 2;
-    this.board.setFlipped(!!flip);
-    $('#tool-flip').classList.toggle('on', this.board.flipped);
-    this.board.fitted = false;
     this.render();
   }
 
