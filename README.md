@@ -1,13 +1,27 @@
 # 5D Chess Lab
 
-An analysis board, a board editor and play against an engine for
-[5D Chess With Multiverse Time Travel](https://en.wikipedia.org/wiki/5D_Chess_with_Multiverse_Time_Travel),
-all in your browser: **<https://fireplank.github.io/5d-chess-lab/>**
+Online play, an analysis board, a board editor, checkmate practice and play against an engine
+for [5D Chess With Multiverse Time Travel](https://en.wikipedia.org/wiki/5D_Chess_with_Multiverse_Time_Travel),
+in your browser: **<https://fireplank.github.io/5d-chess-lab/>**
 
 The engine is [Kairos](https://github.com/FirePlank/5d-chess-engine), compiled to WebAssembly
 and run on your own machine (with its helper threads where the browser allows). 5D Chess Lab is
 an unofficial fan project, not affiliated with Thunkspace.
 
+- **Home**: create an online game (it waits in the lobby for anyone to accept), challenge a
+  friend (a private link), or play Kairos; the lobby is live, and the games being played now are
+  shown with their boards and clocks. Behind it, the 5D title screen's vortex and flying pieces
+  (after [5dcol](https://github.com/ForkKILLET/5dcol); click a piece, then the same kind of the
+  other colour, to annihilate them).
+- **Online games** (`#/game/<id>`, after infinitechess.org's): server clocks (none before both
+  sides moved; increment, delay and the 5D per-timeline delay), abort before both sides moved,
+  resign and draw offers with a second click to confirm, a claim window when the opponent leaves
+  (10 s if they closed the page, 60 s if they lost connection), rematch, chat in private games,
+  spectators, and every finished game recorded (5dpgn with clocks). Against Kairos the engine
+  runs in your browser and its clock waits while you are away. Players are anonymous: a random
+  token in your browser is your identity.
+- **Checkmate practice** (Learn): the 5D game's practice positions against Kairos defending the
+  king, with progress, badges, undo and restart; kept in your browser.
 - **Analysis**: paste or drop a game (5dpgn, 5DFEN, a 5DUCI `position … moves …` line, or
   Kairos's JSON records; Ctrl+V loads from the clipboard) and step through it: every timeline
   and turn on one zoomable board, arrows for the last action and for checks, the present, book
@@ -25,8 +39,8 @@ an unofficial fan project, not affiliated with Thunkspace.
   timelines, select, drag, copy and paste boards and whole timelines, mark unmoved kings, rooks,
   pawns and brawns, and set the board size, odd/even timelines and promotion pieces. The rules
   core checks the position as it changes, and the 5DFEN box edits it both ways.
-- **Games**: your games against Kairos and the analyses you save, kept in your browser
-  (IndexedDB): rename them, add notes, reopen them, export them as JSONL.
+- **Games**: your online games (from the server) and the analyses you save in your browser
+  (IndexedDB): reopen them, rename and annotate the local ones, export them as JSONL.
 - **Rules**: how 5D chess works, from moving between boards to timelines and the present.
 - **Sounds**: standard Lichess move, capture, castling and game-result cues, with a saved sound toggle
   in the header. Sounds work in Play and while making or reviewing moves in Analysis.
@@ -38,6 +52,7 @@ an unofficial fan project, not affiliated with Thunkspace.
 | `static/` | The site: plain HTML, CSS and ES modules, no build step |
 | `wasm/` | The browser build of the Kairos core (rules, game tree, notation and engine) |
 | `server/` | `kairos-web`: serves the site locally, with play against the native engine |
+| `supabase/` | Online play: the database (`migrations/`) and the `game` edge function that checks actions with the rules core |
 | `games/` | A few game records bundled with the site |
 | `tests/` | Node checks of the browser build |
 | `scripts/build_pages.sh` | Assembles the static site for GitHub Pages |
@@ -48,10 +63,14 @@ by `Cargo.lock`.
 ## Running it locally
 
 ```bash
-rustup target add wasm32-wasip1-threads   # once
+rustup target add wasm32-wasip1-threads wasm32-wasip1   # once
 cargo wasm                                # the browser build: target/wasm32-wasip1-threads/release/kairos_wasm.wasm
+cargo wasm-server                         # the online-play server's single-threaded build (kairos-server.wasm)
 cargo web                                 # the server: http://127.0.0.1:8080/
 ```
+
+Online play talks to the project's Supabase backend from any of these (the URL and publishable
+key are in `static/js/net.js`); the local server only serves the pages.
 
 `cargo wasm` and `cargo web` are aliases in `.cargo/config.toml`. The server warns at start if
 the browser build is missing or older than its sources. Its options: `--port 8080`,
@@ -76,7 +95,18 @@ node tests/navigation.mjs                   # WASD panning and analysis position
 node tests/openings.mjs                     # named openings, variations and saved-game export
 node tests/records.mjs games/sprt/*.jsonl   # replay records: actions, book and eval tags, results
 node tests/pgn_corpus.mjs <dir>             # load every 5dpgn file under a directory
+node tests/online-sql.mjs                   # the online-play database in PGlite (npm i --prefix .tools @electric-sql/pglite)
+deno run -A tests/online-fn.ts              # the game edge function with the rules core (after cargo wasm-server)
 ```
+
+## Online play (Supabase)
+
+`supabase/migrations/` holds the database: seeks (the lobby and private challenges), live games,
+their clocks and presence, chat, the permanent `games` records, and the functions every page
+calls (anonymous players pass their token; the database stores only its SHA-256). A pg_cron job
+runs the timers every 10 s. `supabase/functions/game/` is the edge function that checks new
+games and every action with the Kairos rules core (it fetches the published `kairos-server.wasm`)
+before the database applies it. The Supabase GitHub integration deploys both on a push to `main`.
 
 ## How the site is published
 

@@ -4,6 +4,7 @@
 // multiverse grid (5dchess-designer's "+" slots, infinitechess's selections). Every change is
 // one undo step; the rules core checks the position as it changes (`inspect`), and it opens on
 // the analysis board or as a game against Kairos.
+import { playHref } from './position.js';
 import { $, $$, el, toast, store } from './util.js';
 import { pieceImage } from './board.js';
 
@@ -863,7 +864,7 @@ export class Editor {
 
   play() {
     if (!this.result || !this.result.valid) return;
-    location.hash = '#/play?position=' + encodeURIComponent(this.m.uci());
+    location.hash = playHref(this.app, this.m.uci());
   }
 
   // ---------------------------------------------------------------- keys

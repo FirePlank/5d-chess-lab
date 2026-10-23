@@ -1,8 +1,35 @@
-// Your games: the games you finished against Kairos on the Play page and the analyses you saved
-// on the analysis board, kept in this browser (history.js). Each opens on the analysis board;
-// its name and players can be edited, and all of them exported as JSONL records.
+// Your games: your online games (played from this browser; stored on the server, read back by
+// this browser's player id), the games you finished against Kairos on the old Play page and the
+// analyses you saved on the analysis board (kept in this browser, history.js). An online game
+// opens on its game page, the others on the analysis board; a local one's name and players can
+// be edited, and the local ones exported as JSONL records.
 import { $, el, toast, confirmDialog } from './util.js';
 import { listGames, deleteGame, clearGames, recordLine, updateGame } from './history.js';
+import { sb, pid } from './net.js';
+import { resultText } from './online.js';
+import { tcLabel } from './tc.js';
+
+/** Your online games from the server (finished, with at least one action), newest first. */
+async function onlineGames() {
+  const c = sb();
+  if (!c) return [];
+  const me = await pid;
+  const { data, error } = await c.from('player_games')
+    .select('color, score, game:games(id, created_at, ended_at, variant, result, termination, move_count, base_ms, inc_ms, delay_ms, tl_delay_ms, white_name, black_name)')
+    .eq('player', me).limit(500);
+  if (error || !data) return [];
+  return data.filter((r) => r.game).map((r) => {
+    const g = r.game;
+    const human = r.color === 1 ? 'white' : 'black';
+    const opponent = (r.color === 1 ? g.black_name : g.white_name) || 'Anonymous';
+    return {
+      id: `o:${g.id}`, online: g.id, kind: 'online', started: Date.parse(g.created_at), ended: Date.parse(g.ended_at),
+      variant: g.variant, human, white: r.color === 1 ? 'You' : opponent, black: r.color === 2 ? 'You' : opponent,
+      result: g.result, reason: resultText(g.result, g.termination), moves: { length: g.move_count },
+      timeControl: tcLabel(g), engine: /^Kairos/.test(opponent) ? { version: opponent } : null,
+    };
+  });
+}
 
 export class Games {
   constructor(app) {
@@ -16,6 +43,7 @@ export class Games {
       const act = e.target.closest('button[data-act]');
       const tr = e.target.closest('tr[data-id]');
       if (!tr) return;
+      if (tr.dataset.online) return void (location.hash = `#/game/${tr.dataset.online}`);
       const id = +tr.dataset.id;
       if (act && act.dataset.act === 'delete') return this.remove(id);
       if (act && act.dataset.act === 'edit') return this.edit(id);
@@ -23,8 +51,9 @@ export class Games {
     });
     $('#games-export').onclick = () => this.exportAll();
     $('#games-clear').onclick = async () => {
-      if (!this.games.length) return;
-      if (await confirmDialog('Delete every game?', { text: `All ${this.games.length} games kept in this browser are deleted.`, ok: 'Delete all', danger: true })) {
+      const local = this.games.filter((g) => g.kind !== 'online').length;
+      if (!local) return;
+      if (await confirmDialog('Delete every game?', { text: `All ${local} games kept in this browser are deleted (online games stay on the server).`, ok: 'Delete all', danger: true })) {
         await clearGames();
         this.load();
       }
@@ -35,12 +64,14 @@ export class Games {
   activate() { this.load(); }
 
   async load() {
+    let local = [];
     try {
-      this.games = await listGames();
+      local = await listGames();
     } catch (e) {
-      this.games = [];
       toast('Could not read the saved games: ' + e.message, { error: true });
     }
+    const online = await onlineGames().catch(() => []);
+    this.games = [...online, ...local].sort((a, b) => (b.ended || b.started || 0) - (a.ended || a.started || 0));
     const variants = [...new Set(this.games.map((g) => g.variant).filter(Boolean))].sort();
     const sel = $('#f-variant'), cur = sel.value;
     sel.replaceChildren(el('option', { value: '', text: 'All variants' }), ...variants.map((v) => el('option', { value: v, text: v })));
@@ -50,6 +81,7 @@ export class Games {
 
   /** The outcome for you: won/lost/drawn in your games, else the result. */
   static outcome(g) {
+    if (g.result === '*' && g.kind === 'online') return { key: '', text: 'Aborted' };
     if (g.kind !== 'analysis' && g.human && g.result) {
       const mine = g.human === 'white' ? '1-0' : '0-1';
       if (g.result === mine) return { key: 'win', text: 'Won' };
@@ -73,10 +105,11 @@ export class Games {
     const rows = shown.map((g) => {
       const o = Games.outcome(g);
       const saved = g.kind === 'analysis';
-      return el('tr', { dataset: { id: g.id }, title: 'Open on the analysis board' },
+      const online = g.kind === 'online';
+      return el('tr', { dataset: online ? { id: g.id, online: g.online } : { id: g.id }, title: online ? 'Open the game' : 'Open on the analysis board' },
         el('td', { class: 'date-cell', text: fmtDate(g.ended || g.started), title: saved ? (g.saved ? `Last saved ${fmtDate(g.saved)}` : '')
           : [g.started && g.ended ? `Started ${fmtDate(g.started)} · ended ${fmtDate(g.ended)}` : '', g.saved ? `analysis saved ${fmtDate(g.saved)}` : ''].filter(Boolean).join(' · ') }),
-        el('td', { class: 'name-cell' }, el('span', { class: 'kind ' + (saved ? 'saved' : 'played'), text: saved ? 'Analysis' : 'Played' }), Games.title(g),
+        el('td', { class: 'name-cell' }, el('span', { class: 'kind ' + (saved ? 'saved' : online ? 'online' : 'played'), text: saved ? 'Analysis' : online ? 'Online' : 'Played' }), Games.title(g),
           g.notes ? el('span', { class: 'notes', text: g.notes, title: g.notes }) : null),
         el('td', { class: 'variant-cell' }, g.variant || '',
           g.opening ? el('span', { class: 'opening-name', text: g.opening, title: g.opening }) : null),
@@ -85,12 +118,11 @@ export class Games {
         el('td', { class: 'num', text: g.moves ? g.moves.length : '', dataset: { unit: g.moves && g.moves.length === 1 ? ' action' : ' actions' } }),
         el('td', { class: 'tc-cell', text: g.timeControl || '' }),
         el('td', { class: 'engine-cell', text: [g.engine && g.engine.version, g.skillLevel != null ? `Level ${g.skillLevel}` : ''].filter(Boolean).join(' · '), title: g.engine ? engineTitle(g.engine) : '' }),
-        el('td', { class: 'del' },
-          el('button', { type: 'button', dataset: { act: 'edit' }, title: 'Edit name and players', 'aria-label': 'Edit', text: '✎' }),
-          el('button', { type: 'button', dataset: { act: 'delete' }, title: 'Delete this game', 'aria-label': 'Delete', text: '×' })));
+        el('td', { class: 'del' }, online ? null : el('button', { type: 'button', dataset: { act: 'edit' }, title: 'Edit name and players', 'aria-label': 'Edit', text: '✎' }),
+          online ? null : el('button', { type: 'button', dataset: { act: 'delete' }, title: 'Delete this game', 'aria-label': 'Delete', text: '×' })));
     });
     $('#games-body').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { colspan: 9, class: 'empty-state',
-      text: this.games.length ? 'No games match these filters.' : 'No games yet. Finish a game against Kairos on the Play page, or save one from the analysis board.' }))]));
+      text: this.games.length ? 'No games match these filters.' : 'No games yet. Play one from the home page, or save one from the analysis board.' }))]));
   }
 
   async remove(id) {
@@ -121,8 +153,9 @@ export class Games {
   }
 
   exportAll() {
-    if (!this.games.length) return toast('No games to export');
-    const blob = new Blob([this.games.map(recordLine).join('\n') + '\n'], { type: 'application/x-ndjson' });
+    const local = this.games.filter((g) => g.kind !== 'online');
+    if (!local.length) return toast('No games to export');
+    const blob = new Blob([local.map(recordLine).join('\n') + '\n'], { type: 'application/x-ndjson' });
     const a = el('a', { href: URL.createObjectURL(blob), download: `kairos-games-${new Date().toISOString().slice(0, 10)}.jsonl` });
     document.body.append(a);
     a.click();

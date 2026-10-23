@@ -5,9 +5,10 @@ import { VariantPicker } from './variant-picker.js';
 import { sounds } from './sound.js';
 import { moveText } from './notation.js';
 import { prefs } from './prefs.js';
-import { positionFromView } from './position.js';
+import { positionFromView, playHref } from './position.js';
 import { openingAt, renderOpening, openingLink } from './opening.js';
 import { apiGet } from './static-api.js';
+import { sb } from './net.js';
 import { getGame, saveGame, putGame, recordLine } from './history.js';
 import { $, $$, el, toast, fmtScore, fmtNodes, winChance, recordScore, parseLan, store, confirmDialog, onWindow } from './util.js';
 
@@ -85,7 +86,16 @@ export class Analysis {
     this.input.attach(this.source);
     this.board.setOverlay({ readonly: false });
     this.applyFlip();
-    if (params.get('file')) {
+    if (params.get('online')) {
+      // #/analysis/<id>[/b]: a finished online game, from Black's side with /b (as
+      // infinitechess.org's /analysis/<id>/<w|b>).
+      const key = `online:${params.get('online')}:${params.get('color') || ''}`;
+      if (this.loadedKey !== key) {
+        this.loadedKey = key;
+        this.loadOnline(params.get('online'), params.get('color') === 'b');
+        return;
+      }
+    } else if (params.get('file')) {
       const file = params.get('file'), index = +(params.get('index') || 0);
       const key = `${file}#${index}`;
       if (this.loadedKey !== key) {
@@ -124,6 +134,23 @@ export class Analysis {
   applyFlip() {
     this.board.setFlipped(!!this.flipped);
     $('#tool-flip').classList.toggle('on', this.board.flipped);
+  }
+
+  /** A finished online game by its id: its record (headers and actions; the clock comments left out). */
+  async loadOnline(id, black = false) {
+    const c = sb();
+    if (!c) return toast('Online games are not available right now.', { error: true });
+    const { data, error } = await c.from('games').select('record').eq('id', id).maybeSingle();
+    if (error || !data) return toast(error ? 'Could not load the game: ' + error.message : 'That game does not exist (or has not finished).', { error: true });
+    try {
+      this.load(data.record.replace(/ ?\{\[%clk [^\]]*\]\}/g, ''));
+      // From the side the link names (after loading, which turns the board to White).
+      this.flipped = black;
+      this.applyFlip();
+      this.show({ follow: false });
+    } catch (e) {
+      toast('Could not load the game: ' + e.message, { error: true });
+    }
   }
 
   async loadRemote(file, index) {
@@ -916,7 +943,7 @@ export class Analysis {
       this.stopAutoplay();
       // Use the selected node, including its complete move history and timelines.
       const position = positionFromView(this.rules.call({ cmd: 'view', node: this.cur, draft: [] }).view);
-      location.hash = '#/play?position=' + encodeURIComponent(position);
+      location.hash = playHref(this.app, position);
     };
     const actions = $('#analysis-actions');
     actions.addEventListener('click', (event) => { if (event.target.closest('button')) actions.open = false; });

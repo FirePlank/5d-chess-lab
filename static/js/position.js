@@ -5,3 +5,12 @@ export function positionFromView(view) {
   const promos = view.promotions && view.promotions !== 'Q' ? ` promotions ${view.promotions}` : '';
   return `size ${view.size.join('x')} ${view.even ? 'even' : 'odd'}${promos} fen ${boards.join(' ')}`;
 }
+
+/**
+ * Where "Play from here" goes: a game against Kairos from `position` (the home page's options,
+ * stored online), or with the local kairos-web server its own Play page (the native engine).
+ */
+export function playHref(app, position) {
+  const p = encodeURIComponent(position);
+  return app && app.server ? `#/play?position=${p}` : `#/?play=computer&position=${p}`;
+}

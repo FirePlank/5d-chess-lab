@@ -89,6 +89,18 @@ jobs:
         if: steps.engine.outputs.skip != 'true'
         run: cargo check --release -p kairos-web
 
+      - uses: denoland/setup-deno@v2
+        if: steps.engine.outputs.skip != 'true'
+        with:
+          deno-version: v2.x
+
+      - name: Checks of online play (the database in PGlite, the game function with the rules core)
+        if: steps.engine.outputs.skip != 'true'
+        run: |
+          npm install --no-save --prefix .tools @electric-sql/pglite@0.5.11
+          node tests/online-sql.mjs
+          deno run -A tests/online-fn.ts
+
       - name: Checks of the browser build
         if: steps.engine.outputs.skip != 'true'
         run: |

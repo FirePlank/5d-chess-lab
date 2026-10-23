@@ -11,6 +11,9 @@ import { Play } from './play.js';
 import { Openings } from './openings.js';
 import { Games } from './games.js';
 import { Editor } from './editor.js';
+import { Practice } from './practice.js';
+import { Home } from './home.js';
+import { OnlineGame } from './online.js';
 import { setRules } from './static-api.js';
 import { moveText, notationSettings, setNotation } from './notation.js';
 import { prefs, setPref } from './prefs.js';
@@ -40,26 +43,47 @@ async function serverInfo() {
   return null;
 }
 
+const PAGES = ['home', 'game', 'puzzles', 'analysis', 'play', 'editor', 'games', 'rules', 'openings', 'practice'];
+/** Pages on the board workspace (the others are full-page sections). */
+const BOARD_PAGES = ['game', 'analysis', 'play', 'editor', 'practice'];
+
 function route() {
-  const hash = location.hash || '#/analysis';
+  const hash = location.hash || '#/';
   const [path, qs] = hash.slice(2).split('?');
-  const name = ['analysis', 'play', 'editor', 'games', 'rules', 'openings'].includes(path) ? path : 'analysis';
   const params = new URLSearchParams(qs || '');
+  // #/game/<id>: a challenge or an online game.
+  const [head, id, color] = path.split('/');
+  if (head === 'game' && id) params.set('id', id);
+  // #/analysis/<id>[/w|/b]: a finished online game on the analysis board, from that side.
+  if (head === 'analysis' && id) {
+    params.set('online', id);
+    if (color === 'w' || color === 'b') params.set('color', color);
+  }
+  const name = PAGES.includes(head) && head !== 'game' ? head : head === 'game' && id ? 'game' : 'home';
   if (app.route !== name) {
     const prev = app.pages[app.route];
     if (prev && prev.deactivate) prev.deactivate();
   }
   app.route = name;
-  $$('.site-nav a').forEach((a) => a.classList.toggle('on', a.dataset.route === name));
-  $('#workspace').classList.toggle('hidden', name === 'games' || name === 'rules' || name === 'openings');
+  // An online game is part of Play.
+  const navRoute = name === 'game' ? 'home' : name;
+  $$('.site-nav a').forEach((a) => a.classList.toggle('on', a.dataset.route === navRoute));
+  $$('.nav-group').forEach((g) => g.classList.toggle('on', !!g.querySelector(`a[data-route="${navRoute}"]`)));
+  $('#workspace').classList.toggle('hidden', !BOARD_PAGES.includes(name));
+  $('#home').classList.toggle('hidden', name !== 'home');
+  $('#puzzles').classList.toggle('hidden', name !== 'puzzles');
+  if (name !== 'game') $('#challenge').classList.add('hidden');
+  $('#side-game').classList.toggle('hidden', name !== 'game');
   $('#openings').classList.toggle('hidden', name !== 'openings');
   $('#rules').classList.toggle('hidden', name !== 'rules');
   $('#browser').classList.toggle('hidden', name !== 'games');
   $('#side-analysis').classList.toggle('hidden', name !== 'analysis');
   $('#side-play').classList.toggle('hidden', name !== 'play');
   $('#side-editor').classList.toggle('hidden', name !== 'editor');
+  $('#side-practice').classList.toggle('hidden', name !== 'practice');
+  if (name !== 'practice') $('#practice-select').classList.add('hidden');
   $('#workspace').classList.toggle('editing', name === 'editor');
-  if (name === 'analysis' || name === 'play' || name === 'editor') app.board.resize();
+  if (BOARD_PAGES.includes(name)) app.board.resize();
   app.pages[name].activate(params);
 }
 
@@ -72,7 +96,7 @@ function setTheme(t) {
 
 function bindKeys() {
   bindCameraKeys(app.board, () => ['analysis', 'play'].includes(app.route)
-    || (app.route === 'editor' && app.pages.editor.tool === 'move'));
+    || app.route === 'practice' || app.route === 'game' || (app.route === 'editor' && app.pages.editor.tool === 'move'));
   document.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.target.closest('input, textarea, select, dialog, [contenteditable]') || document.querySelector('dialog[open]') || e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key;
@@ -186,11 +210,6 @@ async function main() {
   };
   $('#btn-help').onclick = () => $('#dlg-help').showModal();
   bindSettings();
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    let saved = null;
-    try { saved = localStorage.getItem('kairos.theme'); } catch (err) { /* ignore */ }
-    if (!saved) setTheme(e.matches ? 'dark' : 'light');
-  });
   bindKeys();
   showBuild();
   // The Analysis tab, clicked while already on Analysis, starts over with a new board.
@@ -206,7 +225,7 @@ async function main() {
   });
 
   app.server = await serverInfo();
-  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), rules: rulesPage() };
+  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), home: new Home(app), game: new OnlineGame(app), puzzles: { activate() {} }, rules: rulesPage() };
   try {
     await app.pages.analysis.init();
     setRules(app.pages.analysis.rules);
@@ -218,6 +237,9 @@ async function main() {
   await app.pages.play.init();
   app.pages.games.init();
   app.pages.editor.init();
+  await app.pages.practice.init();
+  await app.pages.home.init();
+  await app.pages.game.init();
   window.addEventListener('hashchange', route);
   route();
   // Warm up the engine worker in the background.

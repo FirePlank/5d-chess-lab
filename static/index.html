@@ -9,30 +9,43 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="coi-serviceworker.js"></script>
 <script>
-  // Theme and board colours before first paint: saved choice, else the system preference.
+  // Theme and board colours before first paint: the saved choice, else dark.
   (() => {
     let t = null, b = null;
     try { t = localStorage.getItem('kairos.theme'); b = JSON.parse(localStorage.getItem('kairos.boardTheme')); } catch (e) {}
-    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    if (t !== 'light' && t !== 'dark') t = 'dark';
     document.documentElement.dataset.theme = t;
     document.documentElement.dataset.board = ['brown', 'blue', 'green'].includes(b) ? b : 'brown';
   })();
 </script>
 <link rel="stylesheet" href="css/app.css">
+<script src="vendor/supabase-2.118.0.js"></script>
 <script type="module" src="js/main.js"></script>
 </head>
 <body>
 <header class="site-header">
   <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Navigation menu" aria-controls="site-nav" aria-expanded="false"><span aria-hidden="true"></span></button>
-  <a class="site-logo" href="#/analysis" aria-label="5D Chess Lab home"><span class="logo-5d">5D</span><span class="logo-name">Chess Lab</span></a>
+  <a class="site-logo" href="#/" aria-label="5D Chess Lab home"><span class="logo-5d">5D</span><span class="logo-name">Chess Lab</span></a>
   <a class="build hidden" id="build" target="_blank" rel="noopener"></a>
   <nav class="site-nav" id="site-nav" aria-label="Sections">
-    <a href="#/analysis" data-route="analysis">Analysis</a>
-    <a href="#/play" data-route="play">Play</a>
-    <a href="#/editor" data-route="editor">Editor</a>
-    <a href="#/games" data-route="games">Games</a>
-    <a href="#/openings" data-route="openings">Openings</a>
-    <a href="#/rules" data-route="rules">Rules</a>
+    <a class="nav-link" href="#/" data-route="home">Play</a>
+    <a class="nav-link" href="#/analysis" data-route="analysis">Analysis</a>
+    <a class="nav-link" href="#/puzzles" data-route="puzzles">Puzzles</a>
+    <div class="nav-group">
+      <button type="button" class="nav-top" aria-haspopup="true">Learn<svg class="nav-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="nav-drop">
+        <a href="#/practice" data-route="practice">Checkmate practice</a>
+        <a href="#/openings" data-route="openings">Openings</a>
+        <a href="#/rules" data-route="rules">Rules</a>
+      </div>
+    </div>
+    <div class="nav-group">
+      <button type="button" class="nav-top" aria-haspopup="true">Tools<svg class="nav-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="nav-drop">
+        <a href="#/editor" data-route="editor">Board editor</a>
+        <a href="#/games" data-route="games">Your games</a>
+      </div>
+    </div>
   </nav>
   <div class="site-actions">
     <button class="icon-btn" id="btn-sound" title="Mute sounds" aria-label="Sound effects" aria-pressed="true"><svg><use href="#i-sound"/></svg></button>
@@ -44,6 +57,74 @@
 </header>
 
 <main id="app">
+  <!-- ============================== Home: play online, with a friend or against Kairos -->
+  <section id="home" class="home hidden" aria-label="Home">
+    <canvas class="title-canvas" id="title-canvas" aria-hidden="true"></canvas>
+    <div class="title-dim" aria-hidden="true"></div>
+    <div class="annihilation hidden" id="annihilation">Annihilated: 0</div>
+    <div class="home-inner">
+      <header class="home-hero">
+        <h1 class="hero-title"><span class="hero-5d">5D</span> Chess Lab</h1>
+        <p class="hero-tag" id="hero-tag">Chess with multiverse time travel</p>
+      </header>
+      <div class="lobby-layout">
+        <div class="lobby-actions">
+          <button class="lobby-btn primary" id="btn-create-game" type="button"><svg aria-hidden="true"><use href="#i-globe"/></svg><span>Create online game</span></button>
+          <button class="lobby-btn" id="btn-challenge-friend" type="button"><svg aria-hidden="true"><use href="#i-friend"/></svg><span>Challenge a friend</span></button>
+          <button class="lobby-btn" id="btn-play-ai" type="button"><svg aria-hidden="true"><use href="#i-chip"/></svg><span>Play against computer</span></button>
+        </div>
+        <section class="lobby" aria-label="Lobby">
+          <div class="lobby-head">
+            <h2>Lobby</h2>
+            <span class="lobby-viewers" title="Viewer count (other than you)"><svg aria-hidden="true"><use href="#i-eye"/></svg><span id="lobby-viewers">&ndash;</span></span>
+          </div>
+          <div class="lobby-table" role="table" aria-label="Open games">
+            <div class="seek-row seek-headrow" role="row"><span role="columnheader">Player</span><span role="columnheader">Variant</span><span role="columnheader">Time</span></div>
+            <div class="seek-rows" id="seek-rows" role="rowgroup"></div>
+            <p class="lobby-empty" id="lobby-empty">No open games right now. Create one, and it shows here for anyone to accept.</p>
+          </div>
+          <div class="lobby-overlay hidden" id="lobby-ingame"><p>You're already in a game.</p><a class="btn primary" id="lobby-rejoin" href="#/">Rejoin game</a></div>
+          <div class="lobby-overlay hidden" id="lobby-idle"><p>Hover to reconnect.</p></div>
+          <div class="lobby-overlay hidden" id="lobby-offline"><p>Online play is not available right now.</p></div>
+        </section>
+      </div>
+      <section class="featured" aria-label="Active games">
+        <h2 class="featured-title" id="featured-title">Active games</h2>
+        <div class="featured-grid" id="featured-grid"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ============================== Puzzles (coming) -->
+  <section id="puzzles" class="puzzles hidden" aria-label="Puzzles">
+    <div class="puzzles-card">
+      <svg class="puzzles-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-puzzle"/></svg>
+      <h1>Puzzles</h1>
+      <p>Find the best action in positions from real games: mates through time, timeline forks and more. Coming soon.</p>
+      <div class="row puzzles-links"><a class="btn primary" href="#/practice">Try checkmate practice</a><a class="btn" href="#/">Play a game</a></div>
+    </div>
+  </section>
+
+  <!-- ============================== An open private challenge -->
+  <section id="challenge" class="challenge hidden" aria-label="Challenge">
+    <div class="ticket">
+      <div class="ticket-stub" id="challenge-preview"></div>
+      <div class="ticket-main">
+        <h1 class="ticket-title" id="challenge-title">Challenge a friend</h1>
+        <p class="ticket-props" id="challenge-props"></p>
+        <div class="ticket-owner hidden" id="challenge-owner">
+          <p>Send this link to your friend to play:</p>
+          <button class="copy-link" id="challenge-copy" type="button" title="Copy link"><svg aria-hidden="true"><use href="#i-copy"/></svg><span id="challenge-link"></span></button>
+          <button class="btn" id="challenge-cancel" type="button">Cancel</button>
+        </div>
+        <div class="ticket-visitor hidden" id="challenge-visitor">
+          <button class="btn primary" id="challenge-accept" type="button">Accept</button>
+          <p class="ticket-reason hidden" id="challenge-ingame">You're already in a game. <a id="challenge-rejoin" href="#/">Rejoin game</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="openings" class="openings hidden" aria-label="Opening explorer">
     <div class="openings-page">
       <div class="openings-toolbar"><a href="#/openings" class="openings-home">Opening book</a><div class="variant-selector" id="opening-variant"></div></div>
@@ -53,6 +134,25 @@
   </section>
   <!-- ============================== Board workspace (Analysis and Play) -->
   <section class="workspace" id="workspace">
+    <!-- Checkmate practice: the list of practice positions, over the board until one is chosen. -->
+    <section class="practice-select hidden" id="practice-select" aria-label="Checkmate practice">
+      <div class="practice-content">
+        <header class="practice-header">
+          <h1 class="practice-title-main">Checkmate Practice</h1>
+          <p class="muted practice-intro">Mate a lone king with a single piece, through time and across timelines, against Kairos defending it. The positions are the 5D game's own.</p>
+          <div class="panel progress-panel">
+            <div class="progress-row"><span class="progress-label">Progress</span><span class="progress-count" id="practice-count"></span></div>
+            <div class="progress-track">
+              <div class="progress-fill" id="practice-fill"></div>
+              <span class="badge" id="practice-badge-bronze"><span class="shine cw"></span><span class="shine ccw"></span><svg class="medal" viewBox="0 0 48 48" aria-hidden="true"><use href="#i-medal-bronze"/></svg></span>
+              <span class="badge" id="practice-badge-silver"><span class="shine cw"></span><span class="shine ccw"></span><svg class="medal" viewBox="0 0 48 48" aria-hidden="true"><use href="#i-medal-silver"/></svg></span>
+              <span class="badge" id="practice-badge-gold"><span class="shine cw"></span><span class="shine ccw"></span><svg class="medal" viewBox="0 0 48 48" aria-hidden="true"><use href="#i-medal-gold"/></svg></span>
+            </div>
+          </div>
+        </header>
+        <div id="practice-groups"></div>
+      </div>
+    </section>
     <div class="board-area" id="board-area">
       <canvas id="board" tabindex="0" aria-label="Multiverse board"></canvas>
       <div class="board-tools" role="toolbar" aria-label="View">
@@ -171,6 +271,64 @@
       </div>
 
       <!-- Board editor -->
+      <div class="side-view hidden" id="side-game">
+        <div class="panel play-live online-live">
+          <div class="player-bar" id="og-top"><span class="side-dot" id="og-top-dot"></span><span class="pname" id="og-top-name"></span><span class="clock-delay" id="og-top-delay"></span><span class="clock" id="og-top-clock"></span></div>
+          <div class="disconnect-status hidden" id="og-opp">
+            <p id="og-opp-text"></p>
+            <div class="og-claims hidden" id="og-claims"><button class="btn" type="button" id="og-claim-win">Claim victory</button><button class="btn" type="button" id="og-claim-draw">Call a draw</button></div>
+          </div>
+          <div class="play-status" id="og-status"></div>
+          <div class="tl-line play-tl"></div>
+          <div class="moves play-moves" id="og-moves"></div>
+          <div class="game-result hidden" id="og-result"><span class="result-score" id="og-result-score"></span><span class="result-text" id="og-result-text"></span></div>
+          <div class="og-actions" id="og-actions-live">
+            <button class="ctrl-text" type="button" id="og-draw" title="Offer draw"><svg><use href="#i-half"/></svg><span>Offer draw</span></button>
+            <button class="ctrl-text" type="button" id="og-abort" title="Abort"><svg><use href="#i-x"/></svg><span>Abort</span></button>
+            <button class="ctrl-text" type="button" id="og-resign" title="Resign"><svg><use href="#i-flag"/></svg><span>Resign</span></button>
+          </div>
+          <div class="og-actions og-draw-offer hidden" id="og-actions-draw">
+            <span class="og-draw-q">Accept draw offer?</span>
+            <button class="ctrl-text" type="button" id="og-draw-yes" title="Accept"><svg><use href="#i-check"/></svg></button>
+            <button class="ctrl-text" type="button" id="og-draw-no" title="Decline"><svg><use href="#i-x"/></svg></button>
+          </div>
+          <div class="og-actions hidden" id="og-actions-over">
+            <button class="ctrl-text" type="button" id="og-rematch" title="Rematch"><svg><use href="#i-redo"/></svg><span>Rematch</span></button>
+            <a class="ctrl-text" id="og-analysis" href="#/analysis" title="Open in the analysis board"><svg><use href="#i-search"/></svg><span>Analysis</span></a>
+            <a class="ctrl-text" href="#/" title="Back to the lobby"><svg><use href="#i-plus"/></svg><span>New game</span></a>
+          </div>
+          <div class="og-actions hidden" id="og-actions-spectate"><span class="og-spectating"><svg><use href="#i-eye"/></svg>Spectating</span></div>
+          <div class="self-disconnect hidden" id="og-self"></div>
+          <div class="player-bar" id="og-bottom"><span class="side-dot" id="og-bottom-dot"></span><span class="pname" id="og-bottom-name"></span><span class="clock-delay" id="og-bottom-delay"></span><span class="clock" id="og-bottom-clock"></span></div>
+        </div>
+        <div class="panel og-info" id="og-info">
+          <div class="og-meta" id="og-meta"></div>
+          <div class="og-watchers hidden" id="og-watchers" title="Spectators"><svg><use href="#i-eye"/></svg><span id="og-watchers-n"></span></div>
+        </div>
+        <div class="panel og-chat hidden" id="og-chat">
+          <div class="og-chat-head">Chat</div>
+          <div class="chat-log" id="og-chat-log"></div>
+          <form class="chat-form" id="og-chat-form"><input class="input" id="og-chat-input" maxlength="140" autocomplete="off" placeholder="Please be nice!"></form>
+          <p class="chat-error hidden" id="og-chat-error"></p>
+        </div>
+      </div>
+
+      <div class="side-view hidden" id="side-practice">
+        <div class="panel play-live practice-live">
+          <div class="practice-head" id="practice-title">Checkmate practice</div>
+          <div class="player-bar" id="practice-top"><span class="pname" id="practice-top-name">Kairos</span></div>
+          <div class="play-status" id="practice-status"></div>
+          <div class="moves play-moves" id="practice-moves"></div>
+          <div class="game-result hidden" id="practice-result"><span class="result-score" id="practice-result-score"></span><span class="result-text" id="practice-result-text"></span></div>
+          <div class="practice-actions">
+            <button class="action-btn" id="practice-undo" title="Undo move" aria-label="Undo move" disabled><svg viewBox="-1 -1 26 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 15 2 9 8 3"/><path d="M2 9h12a6 6 0 0 1 0 12h-3"/></svg></button>
+            <button class="action-btn" id="practice-restart" title="Restart" aria-label="Restart"><svg viewBox="-1 -1 26 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+            <button class="action-btn" id="practice-back" title="Back to the list" aria-label="Back to the list"><svg viewBox="-1 -1 26 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="5" x2="22" y2="5"/><line x1="9" y1="12" x2="22" y2="12"/><line x1="9" y1="19" x2="22" y2="19"/><line x1="3" y1="5" x2="3" y2="5"/><line x1="3" y1="12" x2="3" y2="12"/><line x1="3" y1="19" x2="3" y2="19"/></svg></button>
+          </div>
+          <div class="player-bar" id="practice-bottom"><span class="pname" id="practice-bottom-name">You</span></div>
+        </div>
+      </div>
+
       <div class="side-view hidden" id="side-editor">
         <div class="panel ed-panel">
           <div class="ed-head">
@@ -313,7 +471,7 @@
         <h2 class="panel-title" id="browser-title">Your games</h2>
         <div class="filters">
           <select id="f-result" aria-label="Result"><option value="">All results</option><option value="win">Won</option><option value="loss">Lost</option><option value="draw">Drawn</option></select>
-          <select id="f-kind" aria-label="Kind"><option value="">Played and saved</option><option value="played">Played</option><option value="analysis">Saved analyses</option></select>
+          <select id="f-kind" aria-label="Kind"><option value="">Every game</option><option value="online">Online</option><option value="played">Played here</option><option value="analysis">Saved analyses</option></select>
           <select id="f-variant" aria-label="Variant"><option value="">All variants</option></select>
           <button type="button" class="btn sm" id="games-export" title="Download every game as JSONL records">Export</button>
           <button type="button" class="btn sm danger" id="games-clear" title="Delete every game kept here">Clear all</button>
@@ -431,6 +589,41 @@
     <div class="modal-actions">
       <button class="btn" value="cancel">Close</button>
       <button class="btn primary" type="button" id="export-copy">Copy</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="modal game-setup" id="dlg-game-setup">
+  <form method="dialog" class="modal-body" id="setup-form">
+    <h2>Game options</h2>
+    <div class="field"><span>Variant</span><div class="variant-selector" id="setup-variant"></div></div>
+    <div class="field">
+      <span>Time control</span>
+      <div class="seg" id="setup-timed"><button type="button" data-v="timed">Timed</button><button type="button" data-v="unlimited">Unlimited</button></div>
+      <div class="setup-clock" id="setup-clock">
+        <label class="slider-row"><span>Minutes per side</span><input type="range" id="setup-minutes" min="0" max="25" step="1"><output id="setup-minutes-v"></output></label>
+        <label class="slider-row"><span>Increment in seconds</span><input type="range" id="setup-inc" min="0" max="26" step="1"><output id="setup-inc-v"></output></label>
+        <label class="slider-row" title="Each turn the clock first waits this long per active timeline; unused delay is lost (the 5D tournament format: 5 minutes and 3 s per timeline)"><span>Delay per active timeline</span><input type="range" id="setup-tl" min="0" max="10" step="1"><output id="setup-tl-v"></output></label>
+        <div class="tc-presets" id="setup-presets"></div>
+      </div>
+    </div>
+    <div class="field">
+      <span>Side</span>
+      <div class="color-pick" id="setup-side">
+        <button type="button" data-v="w" title="White"><img src="pieces/king-white.svg" alt="White"></button>
+        <button type="button" data-v="r" title="Random"><img src="pieces/king-white.svg" alt="" class="half"><img src="pieces/king-black.svg" alt="Random" class="half"></button>
+        <button type="button" data-v="b" title="Black"><img src="pieces/king-black.svg" alt="Black"></button>
+      </div>
+    </div>
+    <fieldset class="field skill-field setup-computer"><legend>Strength</legend><div class="skill-pick" id="setup-level"></div></fieldset>
+    <div class="field book-row setup-computer" title="Play known opening theory when available">
+      <label class="switch"><input type="checkbox" id="setup-book" checked aria-label="Opening book"><span></span></label>
+      <span>Opening book</span>
+    </div>
+    <p class="setup-error hidden" id="setup-error"></p>
+    <div class="modal-actions">
+      <button class="btn" type="button" id="setup-close">Cancel</button>
+      <button class="btn primary" type="submit" id="setup-submit">Create online game</button>
     </div>
   </form>
 </dialog>
@@ -584,6 +777,18 @@
     <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4l-5.3 3 1.2-6L3.4 9.3l6-.7Z"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+    <symbol id="i-medal-bronze" viewBox="0 0 48 48"><defs><linearGradient id="g-bronze" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3c9a1"/><stop offset=".55" stop-color="#cd7f32"/><stop offset="1" stop-color="#7a4518"/></linearGradient></defs><path d="M15 2h7l4 12h-7zM33 2h-7l-4 12h7z" fill="#7a4518" opacity=".85"/><circle cx="24" cy="29" r="16" fill="url(#g-bronze)" stroke="#7a4518" stroke-width="2"/><circle cx="24" cy="29" r="11.5" fill="none" stroke="#f3c9a1" stroke-width="1.5" opacity=".7"/><path d="m24 21 2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z" fill="#f3c9a1" stroke="#7a4518" stroke-width=".8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-medal-silver" viewBox="0 0 48 48"><defs><linearGradient id="g-silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#c0c0c0"/><stop offset="1" stop-color="#6e6e6e"/></linearGradient></defs><path d="M15 2h7l4 12h-7zM33 2h-7l-4 12h7z" fill="#6e6e6e" opacity=".85"/><circle cx="24" cy="29" r="16" fill="url(#g-silver)" stroke="#6e6e6e" stroke-width="2"/><circle cx="24" cy="29" r="11.5" fill="none" stroke="#ffffff" stroke-width="1.5" opacity=".7"/><path d="m24 21 2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z" fill="#ffffff" stroke="#6e6e6e" stroke-width=".8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-medal-gold" viewBox="0 0 48 48"><defs><linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".55" stop-color="#e6b422"/><stop offset="1" stop-color="#8a6508"/></linearGradient></defs><path d="M15 2h7l4 12h-7zM33 2h-7l-4 12h7z" fill="#8a6508" opacity=".85"/><circle cx="24" cy="29" r="16" fill="url(#g-gold)" stroke="#8a6508" stroke-width="2"/><circle cx="24" cy="29" r="11.5" fill="none" stroke="#fff3b0" stroke-width="1.5" opacity=".7"/><path d="m24 21 2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z" fill="#fff3b0" stroke="#8a6508" stroke-width=".8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-puzzle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M10 3.5a2 2 0 1 1 4 0V5h4a1 1 0 0 1 1 1v4h-1.5a2 2 0 1 0 0 4H19v4a1 1 0 0 1-1 1h-4v-1.5a2 2 0 1 0-4 0V19H6a1 1 0 0 1-1-1v-4h1.5a2 2 0 1 0 0-4H5V6a1 1 0 0 1 1-1h4Z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="i-friend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M17 8.5h5M19.5 6v5"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx=".5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-half" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20 20 4"/><text x="3.5" y="11" font-size="9" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">1</text><text x="13.5" y="21" font-size="9" font-weight="700" fill="currentColor" stroke="none" font-family="sans-serif">2</text></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
   </defs>
 </svg>
