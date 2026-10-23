@@ -1,15 +1,16 @@
-// The Kairos rules core on the server: the same kairos.wasm the site runs in the browser,
-// fetched once per worker from the published site (so the server always has the rules the
-// site was built with), behind the same JSON calls (`static/js/kairos.js` Rules).
+// The Kairos rules core on the server: the site's own core in its single-threaded build
+// (kairos-server.wasm: the edge runtime has no shared memory), fetched once per worker from the
+// published site (so the server always has the rules the site was built with), behind the same
+// JSON calls (`static/js/kairos.js` Rules).
 // wasi.js is a copy of static/js/wasi.js (tests/supabase.mjs checks they match).
 import { importedMemory, instantiate } from './wasi.js';
 
-const WASM_URL = Deno.env.get('KAIROS_WASM_URL') ?? 'https://fireplank.github.io/5d-chess-lab/kairos.wasm';
+const WASM_URL = Deno.env.get('KAIROS_WASM_URL') ?? 'https://fireplank.github.io/5d-chess-lab/kairos-server.wasm';
 
 type Json = Record<string, unknown>;
 interface Instance { call(req: Json): Json & { ok: boolean; error?: string } }
 
-let compiled: Promise<{ module: WebAssembly.Module; memory: { initial: number; maximum?: number } }> | null = null;
+let compiled: Promise<{ module: WebAssembly.Module; memory: { initial: number; maximum?: number } | null }> | null = null;
 let instance: Instance | null = null;
 
 async function load() {
@@ -18,7 +19,7 @@ async function load() {
       const r = await fetch(WASM_URL);
       if (!r.ok) throw new Error(`kairos.wasm: HTTP ${r.status}`);
       const bytes = await r.arrayBuffer();
-      return { module: await WebAssembly.compile(bytes), memory: importedMemory(bytes)! };
+      return { module: await WebAssembly.compile(bytes), memory: importedMemory(bytes) };
     })();
     compiled.catch(() => { compiled = null; });
   }
@@ -29,7 +30,8 @@ async function load() {
 export async function rules() {
   if (instance) return instance;
   const { module, memory } = await load();
-  const mem = new WebAssembly.Memory({ initial: memory.initial, maximum: memory.maximum, shared: true });
+  // The threads build (a local test may use it) imports shared memory; the server build has its own.
+  const mem = memory ? new WebAssembly.Memory({ initial: memory.initial, maximum: memory.maximum, shared: true }) : null;
   instance = await instantiate(module, { memory: mem }) as Instance;
   return instance;
 }

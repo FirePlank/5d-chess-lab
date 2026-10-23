@@ -65,7 +65,7 @@ jobs:
       - name: Rust with the wasm32-wasip1-threads target
         if: steps.engine.outputs.skip != 'true'
         run: |
-          rustup toolchain install stable --profile minimal --target wasm32-wasip1-threads
+          rustup toolchain install stable --profile minimal --target wasm32-wasip1-threads --target wasm32-wasip1
           rustup default stable
 
       - uses: Swatinem/rust-cache@v2
@@ -80,6 +80,10 @@ jobs:
       - name: Build the browser engine
         if: steps.engine.outputs.skip != 'true'
         run: cargo wasm
+
+      - name: Build the online-play server's rules core
+        if: steps.engine.outputs.skip != 'true'
+        run: cargo wasm-server
 
       - name: The server still builds
         if: steps.engine.outputs.skip != 'true'

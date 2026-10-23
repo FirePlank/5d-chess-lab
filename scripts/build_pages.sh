@@ -7,10 +7,14 @@ cd "$(dirname "$0")/.."
 out=${1:-_site}
 wasm=target/wasm32-wasip1-threads/release/kairos_wasm.wasm
 [ -f "$wasm" ] || { echo "missing $wasm: run cargo wasm" >&2; exit 1; }
+# The online-play server's build (single-threaded; the `game` edge function fetches it).
+server_wasm=target/wasm32-wasip1/release/kairos_wasm.wasm
+[ -f "$server_wasm" ] || { echo "missing $server_wasm: run cargo wasm-server" >&2; exit 1; }
 rm -rf "$out"
 mkdir -p "$out"
 cp -r static/. "$out"/
 cp "$wasm" "$out/kairos.wasm"
+cp "$server_wasm" "$out/kairos-server.wasm"
 mkdir -p "$out/games"
 cp -r games/. "$out/games"/
 "${PYTHON:-python3}" - "$out/games" <<'PY'
