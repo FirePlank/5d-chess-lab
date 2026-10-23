@@ -225,15 +225,12 @@ async function main() {
   bindSettings();
   bindKeys();
   showBuild();
-  // The Analysis tab, clicked while already on Analysis, starts over with a new board.
+  // The Analysis tab, clicked while already on Analysis, starts over with a new board too.
   document.querySelector('.site-nav a[data-route="analysis"]').addEventListener('click', (e) => {
     if (app.route !== 'analysis') return;
     e.preventDefault();
-    const a = app.pages.analysis;
-    a.stopAutoplay();
-    a.loadedKey = null;
-    a.input.reset();
-    a.newGame('Standard - Turn Zero');
+    app.pages.analysis.fresh();
+    toast('New board');
     history.replaceState(null, '', '#/analysis');
   });
 

@@ -127,9 +127,24 @@ export class Analysis {
         this.load(params.get('uci'));
         return;
       }
+    } else {
+      // Plain #/analysis (the tab, a link to it): a fresh board, whatever was done here or on
+      // the other pages before.
+      this.fresh();
+      return;
     }
     this.show({ follow: false });
     this.restartEngine();
+  }
+
+  /** A new standard board from White's side, as the Analysis tab opens. */
+  fresh() {
+    this.stopAutoplay();
+    this.loadedKey = null;
+    this.input.reset();
+    this.flipped = false;
+    this.applyFlip();
+    this.newGame('Standard - Turn Zero', { quiet: true });
   }
 
   deactivate() {
