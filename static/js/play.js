@@ -667,7 +667,7 @@ export class Play {
 
   key(e) {
     const k = e.key;
-    if (k === 'Enter') this.input.submit();
+    if (k === 'Enter' || k === 'f' || k === 'F') this.input.submit();
     else if (k === 'Backspace') this.input.undo();
     else if (k === 'Escape') this.input.clear();
     else if (k === 'ArrowLeft' || k === 'ArrowRight') {

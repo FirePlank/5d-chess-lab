@@ -59,7 +59,7 @@
         <button class="tool" id="tool-present" title="Go to the present (P)" aria-label="Go to the present"><svg><use href="#i-target"/></svg></button>
         <button class="tool" id="tool-zoom-in" title="Zoom in (+)" aria-label="Zoom in"><svg><use href="#i-plus"/></svg></button>
         <button class="tool" id="tool-zoom-out" title="Zoom out (−)" aria-label="Zoom out"><svg><use href="#i-minus"/></svg></button>
-        <button class="tool" id="tool-flip" title="Flip board (F)" aria-label="Flip board"><svg><use href="#i-flip"/></svg></button>
+        <button class="tool" id="tool-flip" title="Flip board (U)" aria-label="Flip board"><svg><use href="#i-flip"/></svg></button>
         <button class="tool" id="tool-autosubmit" title="Auto-submit" aria-label="Auto-submit actions"><svg><use href="#i-send"/></svg></button>
       </div>
       <div class="draft-bar hidden" id="draft-bar">
@@ -67,7 +67,7 @@
         <div class="draft-actions">
           <button class="btn sm" id="draft-undo" title="Take back the last move of this action (Backspace)">Undo</button>
           <button class="btn sm" id="draft-reset" title="Clear this action (Esc)">Clear</button>
-          <button class="btn sm primary" id="draft-submit" title="Submit the action (Enter)">Submit</button>
+          <button class="btn sm primary" id="draft-submit" title="Submit the action (F or Enter)">Submit</button>
         </div>
         <div class="draft-hint" id="draft-hint"></div>
       </div>
@@ -443,8 +443,9 @@
       <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Switch between variations</td></tr>
       <tr><td><kbd>Space</kbd></td><td>Auto-play</td></tr>
       <tr><td><kbd>E</kbd></td><td>Engine analysis on/off</td></tr>
-      <tr><td><kbd>Enter</kbd> <kbd>Backspace</kbd> <kbd>Esc</kbd></td><td>Submit / undo / clear the action you are building</td></tr>
-      <tr><td><kbd>F</kbd> <kbd>P</kbd> <kbd>0</kbd></td><td>Flip, go to the present, fit all boards</td></tr>
+      <tr><td><kbd>F</kbd> or <kbd>Enter</kbd></td><td>Submit the action you are building</td></tr>
+      <tr><td><kbd>Backspace</kbd> <kbd>Esc</kbd></td><td>Undo / clear the action you are building</td></tr>
+      <tr><td><kbd>U</kbd> <kbd>P</kbd> <kbd>0</kbd></td><td>Flip, go to the present, fit all boards</td></tr>
       <tr><td><kbd>L</kbd></td><td>Load a game</td></tr>
       <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd> / <kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Load a game or position from the clipboard / copy the position</td></tr>
       <tr><td>Drag, wheel, pinch</td><td>Pan and zoom</td></tr>
@@ -461,6 +462,7 @@
       <tr><td><kbd>K</kbd> <kbd>Q</kbd> <kbd>R</kbd> <kbd>B</kbd> <kbd>N</kbd> <kbd>P</kbd> …</td><td>Place that piece: a letter for Black, Shift+letter for White (also U D S W C Y)</td></tr>
       <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Pan only in the Move tool; Shift pans faster. Other tools use piece shortcuts.</td></tr>
       <tr><td><kbd>Esc</kbd> <kbd>T</kbd> <kbd>X</kbd> <kbd>O</kbd></td><td>Move, Boards, Erase, Unmoved tool</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Flip the board here (<kbd>U</kbd> is the unicorn)</td></tr>
       <tr><td>Right-click</td><td>Swap the colour of the piece being placed</td></tr>
       <tr><td>Click a timeline's label</td><td>Select its boards; Shift adds to the selection</td></tr>
       <tr><td>Drag / <kbd>Ctrl</kbd>+drag boards</td><td>Move / copy them; <kbd>Shift</kbd>+drag on empty space selects several</td></tr>

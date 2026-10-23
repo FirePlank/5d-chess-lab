@@ -320,9 +320,19 @@ textarea { width: 100%; height: 180px; padding: var(--s2); font: 12.5px/1.5 var(
 .setting-note { margin: 0; font-size: 12px; color: var(--muted); }
 .setting-note:empty { display: none; }
 #engine-settings-btn[aria-expanded="true"] { color: var(--accent); }
-.engine-line { display: flex; gap: var(--s2); padding: 5px var(--s3); font-size: 13px; line-height: 1.4; border-top: 1px solid var(--border); }
+.engine-line { position: relative; display: flex; gap: var(--s2); padding: 5px 26px 5px var(--s3); font-size: 13px; line-height: 1.4; border-top: 1px solid var(--border); }
 .line-eval { flex: none; min-width: 44px; font-weight: 700; color: var(--strong); font-variant-numeric: tabular-nums; }
 .line-moves { display: flex; flex-wrap: wrap; gap: 0 3px; min-width: 0; color: var(--text); }
+/* Collapsed (the default): the line on one row, fading out at its end; the toggle at the right
+   end shows it whole (as on lichess). */
+.engine-line.collapsed .line-moves { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+.engine-line.collapsed .line-move { flex: none; }
+.engine-line.collapsed.fits .line-moves { -webkit-mask-image: none; mask-image: none; }
+.engine-line.collapsed.fits .line-toggle { visibility: hidden; }
+.line-toggle { position: absolute; top: 0; right: 0; width: 24px; height: 100%; max-height: 30px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 11px; cursor: pointer; }
+.line-toggle::before { content: "▲"; }
+.engine-line.collapsed .line-toggle::before { content: "▼"; }
+.line-toggle:hover { background: var(--accent-soft); color: var(--strong); }
 .line-move { padding: 0 3px; border-radius: var(--r-sm); cursor: pointer; }
 .line-move:hover { background: var(--accent-soft); color: var(--strong); }
 .line-move .num { color: var(--muted); margin-right: 2px; }
@@ -778,3 +788,11 @@ table.games { width: 100%; border-collapse: collapse; font-size: 13px; }
   .openings-toolbar .variant-selector { width:100%; max-width:none; }
   .opening-nexts { grid-template-columns:minmax(0,1fr); }
 }
+
+/* Which piece a pawn or brawn promotes to: the choices stacked beside the square (as Lichess),
+   the rest of the board dimmed. */
+.promo-scrim { position: absolute; inset: 0; z-index: 30; background: rgba(0, 0, 0, .45); }
+.promo-pick { --promo-size: 64px; position: absolute; display: grid; grid-auto-flow: column; grid-auto-columns: var(--promo-size); background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: 4px; gap: 2px; }
+.promo-choice { width: var(--promo-size); height: var(--promo-size); padding: 4px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.promo-choice img { width: 100%; height: 100%; display: block; pointer-events: none; }
+.promo-choice:hover, .promo-choice:focus-visible { background: var(--accent-soft); outline: none; }

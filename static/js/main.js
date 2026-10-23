@@ -77,7 +77,9 @@ function bindKeys() {
     // The editor's keys come first: its piece letters include P (pawn).
     if (app.route === 'editor' && app.pages.editor.key(e)) { e.preventDefault(); return; }
     let handled = true;
-    if (k === 'f' || k === 'F') {
+    // U flips the board (as in the game; F submits). In the editor U is the unicorn's piece
+    // letter (the editor takes it above), so there F flips: nothing is submitted there.
+    if (k === 'u' || k === 'U' || ((k === 'f' || k === 'F') && app.route === 'editor')) {
       app.board.setFlipped(!app.board.flipped);
       $('#tool-flip').classList.toggle('on', app.board.flipped);
     } else if (k === 'p' || k === 'P') app.board.goPresent();

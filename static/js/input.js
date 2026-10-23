@@ -3,6 +3,9 @@
 import { $, el, toast, store } from './util.js';
 import { sounds } from './sound.js';
 
+/** Promotion letters (as the rules core's) to the names of their piece images. */
+const PROMO_NAMES = { Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', U: 'unicorn', D: 'dragon', S: 'princess', C: 'commonking' };
+
 export class MoveInput {
   constructor(board) {
     this.board = board;
@@ -26,7 +29,7 @@ export class MoveInput {
       this.autoSubmitBy[this.mode] = !this.autoSubmit;
       store('autoSubmitBy', this.autoSubmitBy);
       this.showAutoSubmit();
-      toast(this.autoSubmit ? 'Auto-submit on' : 'Auto-submit off: press Submit (Enter) after each action');
+      toast(this.autoSubmit ? 'Auto-submit on' : 'Auto-submit off: press Submit (F or Enter) after each action');
     };
     this.showAutoSubmit();
     $('#draft-undo').onclick = () => this.undo();
@@ -43,7 +46,7 @@ export class MoveInput {
     tool.classList.toggle('on', this.autoSubmit);
     tool.title = this.autoSubmit
       ? `Auto-submit is on ${where}: an action is sent once nothing else can be played (click to turn off)`
-      : `Auto-submit is off ${where}: press Submit or Enter after every action, like the Steam game (click to turn on)`;
+      : `Auto-submit is off ${where}: press Submit, F or Enter after every action, like the Steam game (click to turn on)`;
   }
 
   /** Attach to a game source; resets any action in progress. */
@@ -54,6 +57,7 @@ export class MoveInput {
   }
 
   reset() {
+    this.closePromotion();
     this.draft = [];
     this.selected = null;
     this.targets = [];
@@ -136,9 +140,82 @@ export class MoveInput {
     this.board.setOverlay({ selected: null, targets: [], targetColor: null, peek: false });
   }
 
+  /**
+   * The pieces a pawn or brawn moving `sel` to `tgt` may promote to (letters, the position's
+   * promotion set), or none when the move does not promote.
+   */
+  promotionOptions(sel, tgt) {
+    const v = this.board.view;
+    const pc = this.board.pieceAt(sel);
+    if (!v || !pc || !v.promotions || !/^[pw]$/i.test(pc.p)) return [];
+    const last = v.player ? 0 : v.size[1] - 1;
+    return tgt[3] === last ? [...v.promotions] : [];
+  }
+
+  /**
+   * Ask which piece to promote to, as Lichess does: the choices stacked beside the square, the
+   * rest of the board dimmed. Resolves to a piece letter, or null when dismissed (a click
+   * elsewhere, Escape).
+   */
+  askPromotion(tgt, options) {
+    this.closePromotion();
+    const v = this.board.view;
+    const area = $('#board-area');
+    const color = v.player ? 'black' : 'white';
+    return new Promise((resolve) => {
+      const done = (p) => this.closePromotion(p);
+      const buttons = options.map((p) => el('button', {
+        type: 'button', class: 'promo-choice', title: `${PROMO_NAMES[p][0].toUpperCase() + PROMO_NAMES[p].slice(1)} (${p})`,
+        onclick: (e) => { e.stopPropagation(); done(p); },
+      }, el('img', { src: `pieces/${PROMO_NAMES[p]}-${color}.svg`, alt: PROMO_NAMES[p], draggable: 'false' })));
+      const pick = el('div', { class: 'promo-pick', role: 'dialog', 'aria-label': 'Promote to' }, ...buttons);
+      pick.style.gridTemplateRows = `repeat(${Math.min(4, options.length)}, var(--promo-size))`;
+      const scrim = el('div', { class: 'promo-scrim', onclick: () => done(null) }, pick);
+      area.append(scrim);
+      // Beside the target square when that board is drawn (else in the middle), kept inside.
+      const b = this.board;
+      let x = b.w / 2, y = b.h / 2;
+      if (b.boards.has(`${tgt[0]},${2 * tgt[1] + v.player}`)) {
+        [x, y] = b.toScreen(...b.squareCenter(tgt[0], 2 * tgt[1] + v.player, tgt[2], tgt[3]));
+      }
+      const r = pick.getBoundingClientRect();
+      pick.style.left = Math.max(4, Math.min(x - r.width / 2, b.w - r.width - 4)) + 'px';
+      pick.style.top = Math.max(4, Math.min(y - r.height / 2, b.h - r.height - 4)) + 'px';
+      const key = (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        const p = e.key.length === 1 ? e.key.toUpperCase() : '';
+        if (e.key === 'Escape') done(null);
+        else if (options.includes(p)) done(p);
+        else return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      };
+      document.addEventListener('keydown', key, true);
+      this.promo = { scrim, key, resolve };
+    });
+  }
+
+  /** Take the promotion choice down, answering it with `piece` (none when dismissed). */
+  closePromotion(piece = null) {
+    const p = this.promo;
+    if (!p) return;
+    this.promo = null;
+    document.removeEventListener('keydown', p.key, true);
+    p.scrim.remove();
+    p.resolve(piece);
+  }
+
   move(sel, tgt) {
+    const options = this.promotionOptions(sel, tgt);
+    if (options.length < 2) return this.play(sel, tgt);
+    this.askPromotion(tgt, options).then((p) => { if (p) this.play(sel, tgt, p); });
+  }
+
+  /** Add the move to the action (with the piece chosen to promote to, if it promotes). */
+  play(sel, tgt, promote) {
     const s = this.source;
     const mv = { from: [sel.l, sel.t, sel.x, sel.y], to: tgt };
+    if (promote) mv.promote = promote;
     try {
       s.rules.call({ cmd: 'check_move', node: s.node(), draft: this.draft, move: mv });
     } catch (e) {
@@ -210,7 +287,7 @@ export class MoveInput {
     const hint = $('#draft-hint');
     $('#draft-submit').disabled = !v.canSubmit;
     if (v.canSubmit) {
-      hint.textContent = 'Ready: Submit (Enter), or keep playing other boards. Click any piece to see its moves.';
+      hint.textContent = 'Ready: Submit (F or Enter), or keep playing other boards. Click any piece to see its moves.';
       hint.classList.remove('bad');
     } else {
       hint.textContent = v.submitError ? cap(v.submitError) : '';
@@ -255,5 +332,5 @@ export function lanText(m) {
   const sq = (p) => files[p[2]] + (p[3] + 1);
   const a = `(${m.from[0]}T${m.from[1]})${sq(m.from)}`;
   const same = m.from[0] === m.to[0] && m.from[1] === m.to[1];
-  return same ? a + sq(m.to) : `${a}(${m.to[0]}T${m.to[1]})${sq(m.to)}`;
+  return (same ? a + sq(m.to) : `${a}(${m.to[0]}T${m.to[1]})${sq(m.to)}`) + (m.promote || '');
 }

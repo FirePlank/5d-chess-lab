@@ -120,9 +120,10 @@ class Model {
     if (this.promos.join(',') !== 'Q') h.push(`[Promotions "${this.promos.join(',')}"]`);
     return [...h, ...this.tags()].join('\n');
   }
-  /** The 5DUCI `position` argument (engines, and Play): no promotion choice there. */
+  /** The 5DUCI `position` argument (engines, and Play). */
   uci() {
-    return `size ${this.w}x${this.h} ${this.even ? 'even' : 'odd'} fen ${this.tags().join(' ')}`;
+    const promos = this.promos.join('') !== 'Q' ? ` promotions ${this.promos.join('')}` : '';
+    return `size ${this.w}x${this.h} ${this.even ? 'even' : 'odd'}${promos} fen ${this.tags().join(' ')}`;
   }
   snapshot() {
     return JSON.stringify({ w: this.w, h: this.h, even: this.even, promos: this.promos, b: [...this.boards].map(([k, sq]) => [k, fenOf(sq, this.w, this.h)]).sort() });

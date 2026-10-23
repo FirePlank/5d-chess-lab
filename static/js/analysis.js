@@ -40,6 +40,9 @@ export class Analysis {
     this.depth = Math.max(1, Math.min(MAX_DEPTH, +(store('engineSettings') || {}).depth || 15));
     // MultiPV: how many engine lines to show (the engine searches that many best actions).
     this.lines = Math.max(1, Math.min(MAX_LINES, +(store('engineSettings') || {}).lines || 1));
+    // Engine lines (by position in the list) shown whole; the others on one clipped row, as on
+    // lichess, with a toggle at the end of the line.
+    this.expandedLines = new Set(store('expandedLines') || []);
     this.deeperNode = null;
     this.autoplay = null;
     this.lastEmit = 0;
@@ -726,7 +729,7 @@ export class Analysis {
       if (this.pvKey !== key) {
         this.pvKey = key;
         const base = this.node(this.cur);
-        lines.replaceChildren(...shown.map((line) => {
+        lines.replaceChildren(...shown.map((line, rank) => {
           let acts = [];
           try { acts = this.rules.call({ cmd: 'line_san', node: this.cur, line: line.pv }).actions; } catch (e) { acts = []; }
           const moves = el('div', { class: 'line-moves' });
@@ -736,8 +739,25 @@ export class Analysis {
             span.addEventListener('pointerdown', (e) => { e.preventDefault(); this.playPv(line.pv, i + 1); });
             moves.append(span);
           });
-          return el('div', { class: 'engine-line' }, el('span', { class: 'line-eval', text: fmtScore(line) }), moves);
+          const open = this.expandedLines.has(rank);
+          const toggle = el('button', { type: 'button', class: 'line-toggle', 'aria-expanded': String(open), title: open ? 'Show less of this line' : 'Show the whole line', 'aria-label': 'Show the whole line' });
+          const row = el('div', { class: 'engine-line' + (open ? '' : ' collapsed') }, el('span', { class: 'line-eval', text: fmtScore(line) }), moves, toggle);
+          toggle.addEventListener('click', () => {
+            const now = row.classList.toggle('collapsed') === false;
+            if (now) this.expandedLines.add(rank); else this.expandedLines.delete(rank);
+            store('expandedLines', [...this.expandedLines]);
+            toggle.setAttribute('aria-expanded', String(now));
+            toggle.title = now ? 'Show less of this line' : 'Show the whole line';
+          });
+          return row;
         }));
+        // A collapsed line that fits on its row needs no toggle (an open one keeps it).
+        requestAnimationFrame(() => {
+          for (const row of lines.querySelectorAll('.engine-line.collapsed')) {
+            const mv = row.querySelector('.line-moves');
+            row.classList.toggle('fits', mv.scrollWidth <= mv.clientWidth + 1);
+          }
+        });
         // Arrows for each line's first action, weaker lines fainter.
         const player = this.view ? this.view.player : 0;
         this.board.setOverlay({
@@ -787,9 +807,7 @@ export class Analysis {
       $('#set-threads-v').textContent = threads.value;
       $('#set-depth-v').textContent = depth.value;
       $('#set-lines-v').textContent = lines.value;
-      $('#set-note').textContent = threadsSupported
-        ? `${cores} logical cores here; leave one free for the page. Beyond about 8 threads the search gets no faster.`
-        : 'This page is not cross-origin isolated, so the engine runs on one thread.';
+      $('#set-note').textContent = threadsSupported ? '' : 'This page is not cross-origin isolated, so the engine runs on one thread.';
     };
     show();
     btn.onclick = () => {
@@ -1217,7 +1235,7 @@ export class Analysis {
     else if (k === ' ') this.toggleAutoplay();
     else if (k === 'e' || k === 'E') this.setEngine(!(this.engineOn && !this.suppressed));
     else if (k === 'l' || k === 'L') this.openLoad();
-    else if (k === 'Enter') this.input.submit();
+    else if (k === 'Enter' || k === 'f' || k === 'F') this.input.submit();
     else if (k === 'Backspace') this.input.undo();
     else if (k === 'Escape') this.input.clear();
     else return false;
