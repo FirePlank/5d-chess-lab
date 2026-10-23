@@ -3,7 +3,7 @@ import { OpeningTree, openingUrl, bookVariants } from './opening-tree.js';
 import { VariantPicker } from './variant-picker.js';
 import { $, el } from './util.js';
 import { parseFen } from './board.js';
-import { positionFromView, playHref } from './position.js';
+import { positionFromView, continueFrom } from './position.js';
 
 const pieces = { k: 'king', q: 'queen', b: 'bishop', n: 'knight', r: 'rook', p: 'pawn',
   u: 'unicorn', d: 'dragon', w: 'brawn', s: 'princess', y: 'royalqueen', c: 'commonking' };
@@ -69,7 +69,7 @@ export class Openings {
     const uci = 'position ' + tree.start + (this.moves.length ? ' moves ' + this.moves.join(' submit ') + ' submit' : '');
     const actions = el('div', { class: 'opening-actions' },
       el('a', { class: 'btn', href: '#/analysis?uci=' + encodeURIComponent(uci), text: 'Analyse position' }),
-      el('a', { class: 'btn', href: playHref(this.app, positionFromView(tree.view)), text: 'Play from here' }));
+      el('button', { type: 'button', class: 'btn', text: 'Play from here', onclick: () => continueFrom(this.app, positionFromView(tree.view)) }));
     const intro = this.moves.length ? el('div', { class: 'opening-intro' }, preview(tree.view), actions) : actions;
     const grid = el('div', { class: 'opening-nexts' });
     for (const move of tree.children) {

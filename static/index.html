@@ -257,7 +257,7 @@
         </div>
 
         <div class="side-links">
-          <button class="link-btn continue-btn" id="btn-play-position" title="Play Kairos from the position shown"><svg><use href="#i-play"/></svg>Play from here</button>
+          <button class="link-btn continue-btn" id="btn-play-position" title="Play on from the position shown"><svg><use href="#i-play"/></svg>Continue from here</button>
           <button class="link-btn" id="btn-save" title="Save this game and its analysis to Your games"><svg><use href="#i-save"/></svg>Save</button>
           <details class="analysis-actions" id="analysis-actions">
             <summary class="link-btn" aria-label="More analysis actions">More <span aria-hidden="true">···</span></summary>
@@ -364,7 +364,7 @@
           <div class="ed-status" id="ed-status"></div>
           <div class="ed-actions">
             <button class="btn primary" id="ed-analyse" title="Open this position on the analysis board">Analyse</button>
-            <button class="btn" id="ed-play" title="Play Kairos from this position">Play Kairos</button>
+            <button class="btn" id="ed-play" title="Play on from this position">Play from here</button>
           </div>
         </div>
 
@@ -589,6 +589,18 @@
     <div class="modal-actions">
       <button class="btn" value="cancel">Close</button>
       <button class="btn primary" type="button" id="export-copy">Copy</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- "Continue from here" (as lichess): how to play on from a position. -->
+<dialog class="modal continue-with" id="dlg-continue">
+  <form method="dialog" class="modal-body">
+    <h2>Continue from here</h2>
+    <div class="continue-btns">
+      <a class="btn block" data-mode="computer" href="#/"><svg aria-hidden="true"><use href="#i-chip"/></svg>Play against computer</a>
+      <a class="btn block" data-mode="friend" href="#/"><svg aria-hidden="true"><use href="#i-friend"/></svg>Challenge a friend</a>
+      <a class="btn block" data-mode="online" href="#/"><svg aria-hidden="true"><use href="#i-globe"/></svg>Create online game</a>
     </div>
   </form>
 </dialog>

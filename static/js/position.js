@@ -7,10 +7,19 @@ export function positionFromView(view) {
 }
 
 /**
- * Where "Play from here" goes: a game against Kairos from `position` (the home page's options,
- * stored online), or with the local kairos-web server its own Play page (the native engine).
+ * Where playing on from `position` goes, by mode (computer | friend | online): the home page's
+ * game options with that start.
  */
-export function playHref(app, position) {
-  const p = encodeURIComponent(position);
-  return app && app.server ? `#/play?position=${p}` : `#/?play=computer&position=${p}`;
+export function playHref(app, position, mode = 'computer') {
+  return `#/?play=${mode}&position=${encodeURIComponent(position)}`;
+}
+
+/** "Continue from here" (as lichess): ask how to play on from `position`, then go there. */
+export function continueFrom(app, position) {
+  const dialog = document.getElementById('dlg-continue');
+  for (const a of dialog.querySelectorAll('a[data-mode]')) {
+    a.href = playHref(app, position, a.dataset.mode);
+    a.onclick = () => dialog.close();
+  }
+  dialog.showModal();
 }

@@ -183,7 +183,6 @@ export class Play {
     // The board is shared with Analysis: only turn it while Play is the page shown.
     if (this.active) {
       this.board.setFlipped(this.color === 'b');
-      $('#tool-flip').classList.toggle('on', this.board.flipped);
     }
     this.board.fitted = false;
     this.show();
@@ -322,7 +321,6 @@ export class Play {
       const g = this.state && this.state.game;
       if (g) {
         this.board.setFlipped(g.humanColor === 'b');
-        $('#tool-flip').classList.toggle('on', this.board.flipped);
         this.board.fitted = false;
       }
     }).catch(() => {});

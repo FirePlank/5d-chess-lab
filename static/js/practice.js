@@ -195,7 +195,6 @@ export class Practice {
   orient() {
     if (!this.active || !this.game) return;
     this.board.setFlipped(this.game.human === 'b');
-    $('#tool-flip').classList.toggle('on', this.board.flipped);
   }
 
   view(node = this.cur) { return this.rules.call({ cmd: 'view', node, draft: [] }).view; }

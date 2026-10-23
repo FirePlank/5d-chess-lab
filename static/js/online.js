@@ -115,6 +115,7 @@ export class OnlineGame {
 
   deactivate() {
     this.active = false;
+    this.loading(false);
     this.close();
     $('#challenge').classList.add('hidden');
   }
@@ -139,6 +140,9 @@ export class OnlineGame {
   async open(id) {
     this.reset();
     this.id = id;
+    // Nothing is shown until the game is drawn from our side: the board still holds the page
+    // shown before (as infinitechess.org keeps its canvas hidden until the game has loaded).
+    this.loading(true);
     this.me = await pid;
     if (!sb()) {
       toast('Online play is not available right now.', { error: true });
@@ -336,7 +340,6 @@ export class OnlineGame {
     // This page's game drives the shared board from here on (not the page shown before).
     this.input.attach(this.source);
     this.board.setFlipped(this.role === 2);
-    $('#tool-flip').classList.toggle('on', this.board.flipped);
     this.board.fitted = false;
   }
 
@@ -344,6 +347,12 @@ export class OnlineGame {
     if (!this.active) return;
     this.input.attach(this.source);
     this.render();
+    this.loading(false);
+  }
+
+  loading(on) {
+    $('#board').style.visibility = on ? 'hidden' : '';
+    $('#side-game').classList.toggle('loading', on);
   }
 
   /** Rebuild the local game from a start and its actions. */

@@ -54,12 +54,14 @@ function route() {
   // #/game/<id>: a challenge or an online game.
   const [head, id, color] = path.split('/');
   if (head === 'game' && id) params.set('id', id);
+  // The old Play page's links (#/play[?position=...]): the home page's options against Kairos.
+  if (head === 'play') params.set('play', 'computer');
   // #/analysis/<id>[/w|/b]: a finished online game on the analysis board, from that side.
   if (head === 'analysis' && id) {
     params.set('online', id);
     if (color === 'w' || color === 'b') params.set('color', color);
   }
-  const name = PAGES.includes(head) && head !== 'game' ? head : head === 'game' && id ? 'game' : 'home';
+  const name = PAGES.includes(head) && head !== 'game' && head !== 'play' ? head : head === 'game' && id ? 'game' : 'home';
   if (app.route !== name) {
     const prev = app.pages[app.route];
     if (prev && prev.deactivate) prev.deactivate();
@@ -107,7 +109,6 @@ function bindKeys() {
     // letter (the editor takes it above), so there F flips: nothing is submitted there.
     if (k === 'u' || k === 'U' || ((k === 'f' || k === 'F') && app.route === 'editor')) {
       app.board.setFlipped(!app.board.flipped);
-      $('#tool-flip').classList.toggle('on', app.board.flipped);
     } else if (k === 'p' || k === 'P') app.board.goPresent();
     else if (k === '0') app.board.fit();
     else if (k === '+' || k === '=') app.board.zoomAt(1.25);
@@ -196,7 +197,6 @@ async function main() {
   $('#tool-zoom-out').onclick = () => app.board.zoomAt(0.8);
   $('#tool-flip').onclick = () => {
     app.board.setFlipped(!app.board.flipped);
-    $('#tool-flip').classList.toggle('on', app.board.flipped);
   };
   $('#btn-theme').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   // Board square colours: brown, blue, green (lichess themes).

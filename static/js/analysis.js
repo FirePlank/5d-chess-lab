@@ -5,7 +5,7 @@ import { VariantPicker } from './variant-picker.js';
 import { sounds } from './sound.js';
 import { moveText } from './notation.js';
 import { prefs } from './prefs.js';
-import { positionFromView, playHref } from './position.js';
+import { positionFromView, continueFrom } from './position.js';
 import { openingAt, renderOpening, openingLink } from './opening.js';
 import { apiGet } from './static-api.js';
 import { sb } from './net.js';
@@ -133,7 +133,6 @@ export class Analysis {
   /** Show the board from Analysis's own side (Play turns the shared board to its game's). */
   applyFlip() {
     this.board.setFlipped(!!this.flipped);
-    $('#tool-flip').classList.toggle('on', this.board.flipped);
   }
 
   /** A finished online game by its id: its record (headers and actions; the clock comments left out). */
@@ -350,7 +349,7 @@ export class Analysis {
     this.renderBook();
     const canPlay = !['checkmate', 'stalemate', 'exiled-white', 'exiled-black'].includes(v.status);
     $('#btn-play-position').disabled = !canPlay;
-    $('#btn-play-position').title = canPlay ? 'Play Kairos from the position shown' : 'The game is already over here';
+    $('#btn-play-position').title = canPlay ? 'Play on from the position shown: against the computer, a friend or online' : 'The game is already over here';
   }
 
   /**
@@ -409,7 +408,6 @@ export class Analysis {
     if (!prefs.autoFlip || draft.length || (!force && this.flippedFor === v.id)) return;
     this.flippedFor = v.id;
     this.board.setFlipped(!!v.player);
-    $('#tool-flip').classList.toggle('on', this.board.flipped);
   }
 
   renderGameCard() {
@@ -943,7 +941,7 @@ export class Analysis {
       this.stopAutoplay();
       // Use the selected node, including its complete move history and timelines.
       const position = positionFromView(this.rules.call({ cmd: 'view', node: this.cur, draft: [] }).view);
-      location.hash = playHref(this.app, position);
+      continueFrom(this.app, position);
     };
     const actions = $('#analysis-actions');
     actions.addEventListener('click', (event) => { if (event.target.closest('button')) actions.open = false; });
