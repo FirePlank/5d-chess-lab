@@ -11,7 +11,7 @@ import { bookVariants } from './opening-tree.js';
 import { LocalPlay } from './local-play.js';
 import { saveGame } from './history.js';
 import { lanText } from './input.js';
-import { $, $$, el, toast, fmtClock, store, confirmDialog } from './util.js';
+import { $, $$, el, toast, fmtClock, store, confirmDialog, onWindow } from './util.js';
 
 /**
  * Time controls (seconds; base in minutes). `tl` is a simple delay per active timeline: each
@@ -56,7 +56,7 @@ export class Play {
     this.board = app.board;
     this.input = app.input;
     this.token = store('play.token') || null;
-    window.addEventListener('notation-change', () => { if (this.tree) this.renderMoves(); });
+    onWindow('notation-change', () => { if (this.tree) this.renderMoves(); });
     this.state = null;
     this.localMoves = [];
     this.localStart = null;

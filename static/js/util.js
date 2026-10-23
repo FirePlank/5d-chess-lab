@@ -162,3 +162,8 @@ export function store(key, value) {
     localStorage.setItem('kairos.' + key, JSON.stringify(value));
   } catch (e) { return undefined; }
 }
+
+/** Listen for a window event (the settings changing); nothing where there is no window (tests in Node). */
+export function onWindow(type, fn) {
+  if (typeof window !== 'undefined') window.addEventListener(type, fn);
+}

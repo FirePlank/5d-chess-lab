@@ -1,6 +1,6 @@
 // Building an action on the board: select a piece, click a target, repeat on every board you
 // must (or want to) play, then submit. Shared by the analysis board and play mode.
-import { $, el, toast, store } from './util.js';
+import { $, el, toast, store, onWindow } from './util.js';
 import { sounds } from './sound.js';
 import { moveText } from './notation.js';
 
@@ -33,7 +33,7 @@ export class MoveInput {
       toast(this.autoSubmit ? 'Auto-submit on' : 'Auto-submit off: press Submit (F or Enter) after each action');
     };
     this.showAutoSubmit();
-    window.addEventListener('notation-change', () => { if (this.draft.length && this.source) this.renderBar(this.view()); });
+    onWindow('notation-change', () => { if (this.draft.length && this.source) this.renderBar(this.view()); });
     $('#draft-undo').onclick = () => this.undo();
     $('#draft-reset').onclick = () => this.clear();
     $('#draft-submit').onclick = () => this.submit();

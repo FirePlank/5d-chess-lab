@@ -9,7 +9,7 @@ import { positionFromView } from './position.js';
 import { openingAt, renderOpening, openingLink } from './opening.js';
 import { apiGet } from './static-api.js';
 import { getGame, saveGame, putGame, recordLine } from './history.js';
-import { $, $$, el, toast, fmtScore, fmtNodes, winChance, recordScore, parseLan, store, confirmDialog } from './util.js';
+import { $, $$, el, toast, fmtScore, fmtNodes, winChance, recordScore, parseLan, store, confirmDialog, onWindow } from './util.js';
 
 const THROTTLE_MS = 70;
 /** "Go deeper" searches the current position to this depth. */
@@ -45,9 +45,9 @@ export class Analysis {
     // Engine lines (by position in the list) shown whole; the others on one clipped row, as on
     // lichess, with a toggle at the end of the line.
     this.expandedLines = new Set(store('expandedLines') || []);
-    window.addEventListener('prefs-change', () => { if (this.view) this.autoFlip(this.view, this.input.draft, true); });
+    onWindow('prefs-change', () => { if (this.view) this.autoFlip(this.view, this.input.draft, true); });
     // The notation settings changed: write the moves again.
-    window.addEventListener('notation-change', () => {
+    onWindow('notation-change', () => {
       if (!this.tree) return;
       this.pvKey = null;
       this.renderMoves();
