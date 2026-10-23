@@ -1,6 +1,7 @@
 """Turn puzzlegen's site export (one puzzle per line, JSONL) into Supabase migrations that load
-the puzzles into public.puzzles, a file per ~1 MB. Puzzles already there are left alone, so a
-later export only needs the new ones: run it with a new timestamp.
+the puzzles into public.puzzles, a file per ~1 MB. A puzzle already there gets the export's line,
+steps and themes (a newer export: trimmed lines, say) and keeps its rating and plays; a later
+export goes in as migrations with a new timestamp.
 
     python scripts/puzzles_sql.py <site_puzzles.jsonl> <timestamp, e.g. 20261024100100>
 """
@@ -21,7 +22,9 @@ from jsonb_array_elements($puzzles$
 """
 TAIL = """
 $puzzles$::jsonb) p
-on conflict (id) do nothing;
+on conflict (id) do update set side = excluded.side, outcome = excluded.outcome, themes = excluded.themes,
+  position = excluded.position, mate_in = excluded.mate_in, ends_in_mate = excluded.ends_in_mate,
+  solution = excluded.solution, steps = excluded.steps;
 """
 
 
