@@ -16,8 +16,11 @@
     if (t !== 'light' && t !== 'dark') t = 'dark';
     document.documentElement.dataset.theme = t;
     document.documentElement.dataset.board = ['brown', 'blue', 'green'].includes(b) ? b : 'brown';
+    // The app area stays hidden until the page the address names is shown (below <main>).
+    document.documentElement.dataset.boot = '';
   })();
 </script>
+<script src="js/page.js"></script>
 <link rel="stylesheet" href="css/app.css">
 <script src="vendor/supabase-2.118.0.js"></script>
 <script type="module" src="js/main.js"></script>
@@ -324,7 +327,7 @@
       </div>
 
       <!-- Board editor -->
-      <div class="side-view hidden" id="side-game">
+      <div class="side-view hidden loading" id="side-game">
         <div class="panel play-live online-live">
           <div class="player-bar" id="og-top"><span class="side-dot" id="og-top-dot"></span><span class="pname" id="og-top-name"></span><span class="clock-delay" id="og-top-delay"></span><span class="clock" id="og-top-clock"></span></div>
           <div class="disconnect-status hidden" id="og-opp">
@@ -383,7 +386,7 @@
       </div>
 
       <!-- Puzzles (lichess's trainer): the theme, the puzzle, what to do, the moves, the session. -->
-      <div class="side-view hidden" id="side-puzzle">
+      <div class="side-view hidden loading" id="side-puzzle">
         <div class="panel pz-top">
           <a class="pz-back" href="#/puzzles/themes" title="Puzzle themes, filters and your history"><svg aria-hidden="true"><use href="#i-prev"/></svg><span>Puzzle themes</span></a>
           <div class="pz-theme"><strong id="pz-theme-name"></strong><span class="muted" id="pz-theme-desc"></span></div>
@@ -645,6 +648,11 @@
     </article>
   </section>
 </main>
+<script>
+  // The page the address names, before the app has loaded (main.js routes from then on).
+  try { kairosShow(kairosPage(location.hash).name); } catch (e) { /* main.js shows it */ }
+  delete document.documentElement.dataset.boot;
+</script>
 
 <!-- ============================== Dialogs -->
 <dialog class="modal" id="dlg-load">

@@ -44,60 +44,20 @@ async function serverInfo() {
   return null;
 }
 
-const PAGES = ['home', 'game', 'puzzles', 'puzzlethemes', 'analysis', 'play', 'editor', 'games', 'rules', 'openings', 'practice'];
 /** Pages on the board workspace (the others are full-page sections). */
-const BOARD_PAGES = ['game', 'puzzles', 'analysis', 'play', 'editor', 'practice'];
+const BOARD_PAGES = KAIROS_BOARD_PAGES;
 
 function route() {
-  const hash = location.hash || '#/';
-  const [path, qs] = hash.slice(2).split('?');
-  const params = new URLSearchParams(qs || '');
-  // #/game/<id>: a challenge or an online game.
-  const [head, id, color] = path.split('/');
-  if (head === 'game' && id) params.set('id', id);
-  // The old Play page's links (#/play[?position=...]): the home page's options against Kairos.
-  if (head === 'play') params.set('play', 'computer');
-  // #/analysis/<id>[/w|/b]: a finished online game on the analysis board, from that side.
-  // #/analysis/puzzle/<id>[/b]: a puzzle and its solution on the analysis board.
-  const side = path.split('/')[3];
-  if (head === 'analysis' && id === 'puzzle' && color) {
-    params.set('puzzle', color);
-    if (side === 'b') params.set('color', 'b');
-  } else if (head === 'analysis' && id) {
-    params.set('online', id);
-    if (color === 'w' || color === 'b') params.set('color', color);
-  }
-  // #/puzzles/themes (and plain #/puzzles): the themes; #/puzzles?new=1: the next puzzle;
-  // #/puzzles/<id>: that one.
-  if (head === 'puzzles' && id && id !== 'themes') params.set('id', id);
-  if (head === 'puzzles' && !id && !params.get('new')) history.replaceState(null, '', '#/puzzles/themes');
-  let name = PAGES.includes(head) && head !== 'game' && head !== 'play' && head !== 'puzzlethemes' ? head : head === 'game' && id ? 'game' : 'home';
-  if (head === 'puzzles' && (id === 'themes' || (!id && !params.get('new')))) name = 'puzzlethemes';
+  // The page and its sections: page.js (also run before the app loads, from the document).
+  const { name, params } = kairosPage(location.hash);
+  if (name === 'puzzlethemes' && !location.hash.startsWith('#/puzzles/themes')) history.replaceState(null, '', '#/puzzles/themes');
   if (app.route !== name) {
     const prev = app.pages[app.route];
     if (prev && prev.deactivate) prev.deactivate();
   }
   app.route = name;
-  // An online game is part of Play.
-  const navRoute = name === 'game' ? 'home' : name === 'puzzlethemes' ? 'puzzles' : name;
-  $$('.site-nav a').forEach((a) => a.classList.toggle('on', a.dataset.route === navRoute));
-  $$('.nav-group').forEach((g) => g.classList.toggle('on', !!g.querySelector(`a[data-route="${navRoute}"]`)));
-  $('#workspace').classList.toggle('hidden', !BOARD_PAGES.includes(name));
-  $('#home').classList.toggle('hidden', name !== 'home');
-  $('#puzzles').classList.toggle('hidden', name !== 'puzzlethemes');
-  $('#side-puzzle').classList.toggle('hidden', name !== 'puzzles');
-  if (name !== 'puzzles') $('#pz-empty').classList.add('hidden');
-  if (name !== 'game') $('#challenge').classList.add('hidden');
-  $('#side-game').classList.toggle('hidden', name !== 'game');
-  $('#openings').classList.toggle('hidden', name !== 'openings');
-  $('#rules').classList.toggle('hidden', name !== 'rules');
-  $('#browser').classList.toggle('hidden', name !== 'games');
-  $('#side-analysis').classList.toggle('hidden', name !== 'analysis');
-  $('#side-play').classList.toggle('hidden', name !== 'play');
-  $('#side-editor').classList.toggle('hidden', name !== 'editor');
-  $('#side-practice').classList.toggle('hidden', name !== 'practice');
-  if (name !== 'practice') $('#practice-select').classList.add('hidden');
-  $('#workspace').classList.toggle('editing', name === 'editor');
+  kairosShow(name);
+  delete document.documentElement.dataset.boot;
   if (BOARD_PAGES.includes(name)) app.board.resize();
   app.pages[name].activate(params);
 }
