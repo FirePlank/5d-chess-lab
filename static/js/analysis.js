@@ -3,6 +3,8 @@
 import { Rules, parseInfo, threadsSupported } from './kairos.js';
 import { VariantPicker } from './variant-picker.js';
 import { sounds } from './sound.js';
+import { moveText } from './notation.js';
+import { prefs } from './prefs.js';
 import { positionFromView } from './position.js';
 import { openingAt, renderOpening, openingLink } from './opening.js';
 import { apiGet } from './static-api.js';
@@ -43,6 +45,14 @@ export class Analysis {
     // Engine lines (by position in the list) shown whole; the others on one clipped row, as on
     // lichess, with a toggle at the end of the line.
     this.expandedLines = new Set(store('expandedLines') || []);
+    window.addEventListener('prefs-change', () => { if (this.view) this.autoFlip(this.view, this.input.draft, true); });
+    // The notation settings changed: write the moves again.
+    window.addEventListener('notation-change', () => {
+      if (!this.tree) return;
+      this.pvKey = null;
+      this.renderMoves();
+      this.renderEngine();
+    });
     this.deeperNode = null;
     this.autoplay = null;
     this.lastEmit = 0;
@@ -345,6 +355,7 @@ export class Analysis {
 
   onView(v, draft) {
     this.view = v;
+    this.autoFlip(v, draft);
     const chip = $('#status-chip');
     chip.className = 'status-line';
     if (draft.length) {
@@ -364,6 +375,14 @@ export class Analysis {
       chip.textContent = `${side} to move${inCheck ? ' · in check' : ''}`;
       if (inCheck) chip.classList.add('check');
     }
+  }
+
+  /** With the preference on, turn the board to the side to move when the position changes. */
+  autoFlip(v, draft, force = false) {
+    if (!prefs.autoFlip || draft.length || (!force && this.flippedFor === v.id)) return;
+    this.flippedFor = v.id;
+    this.board.setFlipped(!!v.player);
+    $('#tool-flip').classList.toggle('on', this.board.flipped);
   }
 
   renderGameCard() {
@@ -393,7 +412,7 @@ export class Analysis {
   moveCell(id, cls = 'mv') {
     const n = this.node(id);
     const cell = el('div', { class: cls + (n.book ? ' book' : '') + (id === this.cur ? ' cur' : ''), dataset: { id }, title: n.lan + (n.book ? '  (book)' : '') });
-    cell.append(n.san || n.lan);
+    cell.append(moveText(n) || n.lan);
     const s = this.cache.get(id) || this.recordedScoreAt(id);
     if (s) cell.append(el('span', { class: 'mv-eval', text: fmtScore(s) }));
     return cell;
@@ -454,7 +473,7 @@ export class Analysis {
         const { num, black } = this.moveNumber(n);
         const label = !black ? `${num}. ` : first ? `${num}… ` : '';
         first = false;
-        wrap.append(el('span', { class: 'vmv' + (c === this.cur ? ' cur' : ''), dataset: { id: c }, text: label + (n.san || n.lan) }));
+        wrap.append(el('span', { class: 'vmv' + (c === this.cur ? ' cur' : ''), dataset: { id: c }, text: label + (moveText(n) || n.lan) }));
         const kids = n.children;
         for (const alt of kids.slice(1)) {
           wrap.append('(');
@@ -735,7 +754,7 @@ export class Analysis {
           const moves = el('div', { class: 'line-moves' });
           acts.forEach((a, i) => {
             const { num, black } = this.moveNumber({ ply: base.ply + 1 + i });
-            const span = el('span', { class: 'line-move', title: a.lan }, (i === 0 || !black) ? el('span', { class: 'num', text: black ? `${num}…` : `${num}.` }) : null, a.san);
+            const span = el('span', { class: 'line-move', title: a.lan }, (i === 0 || !black) ? el('span', { class: 'num', text: black ? `${num}…` : `${num}.` }) : null, moveText(a));
             span.addEventListener('pointerdown', (e) => { e.preventDefault(); this.playPv(line.pv, i + 1); });
             moves.append(span);
           });
@@ -1116,7 +1135,7 @@ export class Analysis {
     if (n.parent == null) return;
     const parent = this.node(n.parent);
     const { num, black } = this.moveNumber(n);
-    const title = `${num}${black ? '…' : '.'} ${n.san || n.lan}`;
+    const title = `${num}${black ? '…' : '.'} ${moveText(n) || n.lan}`;
     const item = (label, fn, cls = '') => el('button', { type: 'button', class: 'ctx-item' + cls, onclick: () => { closeMenu(); fn(); } }, label);
     const items = [];
     if (parent.children[0] !== id) items.push(item('Promote variation', () => this.promoteNode(id, true)));

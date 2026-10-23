@@ -2,6 +2,7 @@
 // must (or want to) play, then submit. Shared by the analysis board and play mode.
 import { $, el, toast, store } from './util.js';
 import { sounds } from './sound.js';
+import { moveText } from './notation.js';
 
 /** Promotion letters (as the rules core's) to the names of their piece images. */
 const PROMO_NAMES = { Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', U: 'unicorn', D: 'dragon', S: 'princess', C: 'commonking' };
@@ -32,6 +33,7 @@ export class MoveInput {
       toast(this.autoSubmit ? 'Auto-submit on' : 'Auto-submit off: press Submit (F or Enter) after each action');
     };
     this.showAutoSubmit();
+    window.addEventListener('notation-change', () => { if (this.draft.length && this.source) this.renderBar(this.view()); });
     $('#draft-undo').onclick = () => this.undo();
     $('#draft-reset').onclick = () => this.clear();
     $('#draft-submit').onclick = () => this.submit();
@@ -283,7 +285,7 @@ export class MoveInput {
     bar.classList.remove('hidden');
     const moves = $('#draft-moves');
     const san = v.draftSan || [];
-    moves.replaceChildren(...this.draft.map((m, i) => el('span', { class: 'chip', title: lanText(m), text: san[i] || lanText(m) })));
+    moves.replaceChildren(...this.draft.map((m, i) => el('span', { class: 'chip', title: lanText(m), text: moveText({ san: san[i], sanFull: (v.draftSanFull || [])[i], lone: v.lone }) || lanText(m) })));
     const hint = $('#draft-hint');
     $('#draft-submit').disabled = !v.canSubmit;
     if (v.canSubmit) {

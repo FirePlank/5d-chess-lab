@@ -5,6 +5,7 @@
 import { Rules } from './kairos.js';
 import { VariantPicker } from './variant-picker.js';
 import { sounds } from './sound.js';
+import { moveText } from './notation.js';
 import { openingAt, renderOpening, openingLink } from './opening.js';
 import { bookVariants } from './opening-tree.js';
 import { LocalPlay } from './local-play.js';
@@ -55,6 +56,7 @@ export class Play {
     this.board = app.board;
     this.input = app.input;
     this.token = store('play.token') || null;
+    window.addEventListener('notation-change', () => { if (this.tree) this.renderMoves(); });
     this.state = null;
     this.localMoves = [];
     this.localStart = null;
@@ -576,7 +578,7 @@ export class Play {
         rows.push(row);
         if (black) row.append(el('div', { class: 'mv empty', text: '…' }));
       }
-      const mv = el('div', { class: 'mv' + (c === this.cur ? ' cur' : ''), dataset: { id: c }, title: n.lan }, n.san || n.lan);
+      const mv = el('div', { class: 'mv' + (c === this.cur ? ' cur' : ''), dataset: { id: c }, title: n.lan }, moveText(n) || n.lan);
       // Opening theory (an action the engine's book plays here): the book badge, as on chess.com.
       const book = this.bookMove(c);
       if (book) {

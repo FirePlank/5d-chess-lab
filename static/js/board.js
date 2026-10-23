@@ -5,6 +5,8 @@
 // (positive lines below from White's side), half-turns are columns, so the present is a
 // vertical band. Flipping mirrors the rows and turns every board around.
 
+import { prefs } from './prefs.js';
+
 const PIECE_FILES = {
   k: 'king', q: 'queen', b: 'bishop', n: 'knight', r: 'rook', p: 'pawn',
   u: 'unicorn', d: 'dragon', w: 'brawn', s: 'princess', y: 'royalqueen', c: 'commonking',
@@ -262,7 +264,7 @@ export class MultiverseView {
     this.frame(x0 - 1, y0, x1 + 1, y1, animate, 60);
   }
   moveTo(t, animate = true) {
-    if (animate) {
+    if (animate && prefs.animations) {
       if (this.targetMode !== 'spring') this.vel = { x: 0, y: 0, s: 0 };
       this.target = t;
       this.targetMode = 'spring';
@@ -307,7 +309,7 @@ export class MultiverseView {
       this.boards.set(`${l},${v}`, { l, t, c, v, squares: parseFen(fen, w, h) });
     }
     // Boards an action adds slide in (not in the editor, where boards are placed by hand).
-    if (prev && prev.size[0] === w && prev.size[1] === h && !this.editor) this.animateBoards(old, prev);
+    if (prev && prev.size[0] === w && prev.size[1] === h && !this.editor && prefs.animations) this.animateBoards(old, prev);
     this.phantom = (view.phantom || []).map(([l, t, c, fen]) => ({ l, t, c, v: 2 * t + c, squares: parseFen(fen, w, h) }));
     this.timelines = new Map(view.timelines.map((tl) => [tl.l, tl]));
     if (!prev || prev.size[0] !== w || prev.size[1] !== h || !this.fitted) {
@@ -490,7 +492,7 @@ export class MultiverseView {
         return;
       }
       if (down && down.button === 2) {
-        if (!down.moved && Math.hypot(e.offsetX - down.x, e.offsetY - down.y) > 5) down.moved = true;
+        if (!down.moved && Math.hypot(e.offsetX - down.x, e.offsetY - down.y) > prefs.dragThreshold) down.moved = true;
         if (down.moved && down.start) {
           const sq = this.pick(e.offsetX, e.offsetY);
           const to = sq && !(sq.l === down.start.l && sq.v === down.start.v && sq.x === down.start.x && sq.y === down.start.y) ? sq : null;
@@ -501,7 +503,7 @@ export class MultiverseView {
       }
       if (down) {
         const dx = e.offsetX - down.x, dy = e.offsetY - down.y;
-        if (!down.moved && Math.hypot(dx, dy) > 5) {
+        if (!down.moved && Math.hypot(dx, dy) > prefs.dragThreshold) {
           down.moved = true;
           cv.classList.add('dragging');
         }

@@ -37,6 +37,7 @@
   <div class="site-actions">
     <button class="icon-btn" id="btn-sound" title="Mute sounds" aria-label="Sound effects" aria-pressed="true"><svg><use href="#i-sound"/></svg></button>
     <button class="icon-btn" id="btn-board-theme" title="Board colours" aria-label="Board colours"><svg><use href="#i-palette"/></svg></button>
+    <button class="icon-btn" id="btn-settings" title="Settings" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
     <button class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg><use href="#i-keyboard"/></svg></button>
     <button class="icon-btn" id="btn-theme" title="Light / dark" aria-label="Toggle light or dark theme"><svg class="only-light"><use href="#i-moon"/></svg><svg class="only-dark"><use href="#i-sun"/></svg></button>
   </div>
@@ -431,6 +432,36 @@
       <button class="btn" value="cancel">Close</button>
       <button class="btn primary" type="button" id="export-copy">Copy</button>
     </div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="dlg-settings">
+  <form method="dialog" class="modal-body">
+    <h2>Settings</h2>
+    <h3 class="set-head">Board</h3>
+    <label class="set-row">
+      <span><b>Animations</b><small>Boards slide in as an action adds them, and the view glides to follow.</small></span>
+      <span class="switch"><input type="checkbox" id="set-animations" aria-label="Animations"><span></span></span>
+    </label>
+    <label class="set-row">
+      <span><b>Turn the board to the side to move</b><small>On the analysis board, whenever the position changes.</small></span>
+      <span class="switch"><input type="checkbox" id="set-autoflip" aria-label="Turn the board to the side to move"><span></span></span>
+    </label>
+    <label class="set-row">
+      <span><b>Drag threshold</b><small>How far to move the pointer before a click becomes a drag: <output id="set-drag-value"></output></small></span>
+      <input type="range" id="set-drag" min="0" max="24" step="1" aria-label="Drag threshold">
+    </label>
+    <h3 class="set-head">Move notation</h3>
+    <label class="set-row">
+      <span><b>Omit source squares when clear</b><small>Write Nf3 where no other piece could make the move, not Ng1f3.</small></span>
+      <span class="switch"><input type="checkbox" id="set-omit-squares" aria-label="Omit source squares when clear"><span></span></span>
+    </label>
+    <label class="set-row">
+      <span><b>Omit source board with one active board</b><small>Leave out (0T2) while there is a single board to play on.</small></span>
+      <span class="switch"><input type="checkbox" id="set-omit-boards" aria-label="Omit source board with one active board"><span></span></span>
+    </label>
+    <p class="set-example" id="set-example"></p>
+    <div class="modal-actions"><button class="btn primary" value="close">Done</button></div>
   </form>
 </dialog>
 

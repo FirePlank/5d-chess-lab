@@ -12,6 +12,8 @@ import { Openings } from './openings.js';
 import { Games } from './games.js';
 import { Editor } from './editor.js';
 import { setRules } from './static-api.js';
+import { moveText, notationSettings, setNotation } from './notation.js';
+import { prefs, setPref } from './prefs.js';
 import { $, $$, toast, store, bindDialogDismiss } from './util.js';
 
 /** Saved analysis-engine settings over the defaults. */
@@ -95,6 +97,34 @@ function bindKeys() {
   });
 }
 
+/** The Settings dialog: how moves are written (see notation.js). */
+function bindSettings() {
+  const squares = $('#set-omit-squares'), boards = $('#set-omit-boards');
+  const show = () => {
+    const s = notationSettings();
+    squares.checked = s.omitSourceSquares;
+    boards.checked = s.omitSourceBoards;
+    // The same move as the settings write it, where a board has one active board.
+    const e = { san: '(0T2)Nf3', sanFull: '(0T2)Ng1f3', lone: true };
+    $('#set-example').textContent = `Example: ${moveText(e)}`;
+  };
+  const anim = $('#set-animations'), drag = $('#set-drag'), flip = $('#set-autoflip');
+  const showPrefs = () => {
+    anim.checked = prefs.animations;
+    flip.checked = prefs.autoFlip;
+    drag.value = prefs.dragThreshold;
+    $('#set-drag-value').textContent = `${prefs.dragThreshold} px`;
+  };
+  anim.onchange = () => setPref('animations', anim.checked);
+  flip.onchange = () => setPref('autoFlip', flip.checked);
+  drag.oninput = () => setPref('dragThreshold', drag.value);
+  window.addEventListener('prefs-change', showPrefs);
+  squares.onchange = () => setNotation('omitSourceSquares', squares.checked);
+  boards.onchange = () => setNotation('omitSourceBoards', boards.checked);
+  window.addEventListener('notation-change', show);
+  $('#btn-settings').onclick = () => { show(); showPrefs(); $('#dlg-settings').showModal(); };
+}
+
 /** The published build (version.json, written by scripts/build_pages.sh): its commit, as a link. */
 async function showBuild() {
   try {
@@ -155,6 +185,7 @@ async function main() {
     toast(`Board: ${next}`);
   };
   $('#btn-help').onclick = () => $('#dlg-help').showModal();
+  bindSettings();
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
     let saved = null;
     try { saved = localStorage.getItem('kairos.theme'); } catch (err) { /* ignore */ }
