@@ -14,6 +14,7 @@ import { Editor } from './editor.js';
 import { Practice } from './practice.js';
 import { Home } from './home.js';
 import { OnlineGame } from './online.js';
+import { Puzzles, PuzzleThemes } from './puzzles.js';
 import { setRules } from './static-api.js';
 import { moveText, notationSettings, setNotation } from './notation.js';
 import { prefs, setPref } from './prefs.js';
@@ -43,9 +44,9 @@ async function serverInfo() {
   return null;
 }
 
-const PAGES = ['home', 'game', 'puzzles', 'analysis', 'play', 'editor', 'games', 'rules', 'openings', 'practice'];
+const PAGES = ['home', 'game', 'puzzles', 'puzzlethemes', 'analysis', 'play', 'editor', 'games', 'rules', 'openings', 'practice'];
 /** Pages on the board workspace (the others are full-page sections). */
-const BOARD_PAGES = ['game', 'analysis', 'play', 'editor', 'practice'];
+const BOARD_PAGES = ['game', 'puzzles', 'analysis', 'play', 'editor', 'practice'];
 
 function route() {
   const hash = location.hash || '#/';
@@ -57,23 +58,33 @@ function route() {
   // The old Play page's links (#/play[?position=...]): the home page's options against Kairos.
   if (head === 'play') params.set('play', 'computer');
   // #/analysis/<id>[/w|/b]: a finished online game on the analysis board, from that side.
-  if (head === 'analysis' && id) {
+  // #/analysis/puzzle/<id>[/b]: a puzzle and its solution on the analysis board.
+  const side = path.split('/')[3];
+  if (head === 'analysis' && id === 'puzzle' && color) {
+    params.set('puzzle', color);
+    if (side === 'b') params.set('color', 'b');
+  } else if (head === 'analysis' && id) {
     params.set('online', id);
     if (color === 'w' || color === 'b') params.set('color', color);
   }
-  const name = PAGES.includes(head) && head !== 'game' && head !== 'play' ? head : head === 'game' && id ? 'game' : 'home';
+  // #/puzzles: the next puzzle; #/puzzles/<id>: that one; #/puzzles/themes: the themes.
+  if (head === 'puzzles' && id && id !== 'themes') params.set('id', id);
+  let name = PAGES.includes(head) && head !== 'game' && head !== 'play' && head !== 'puzzlethemes' ? head : head === 'game' && id ? 'game' : 'home';
+  if (head === 'puzzles' && id === 'themes') name = 'puzzlethemes';
   if (app.route !== name) {
     const prev = app.pages[app.route];
     if (prev && prev.deactivate) prev.deactivate();
   }
   app.route = name;
   // An online game is part of Play.
-  const navRoute = name === 'game' ? 'home' : name;
+  const navRoute = name === 'game' ? 'home' : name === 'puzzlethemes' ? 'puzzles' : name;
   $$('.site-nav a').forEach((a) => a.classList.toggle('on', a.dataset.route === navRoute));
   $$('.nav-group').forEach((g) => g.classList.toggle('on', !!g.querySelector(`a[data-route="${navRoute}"]`)));
   $('#workspace').classList.toggle('hidden', !BOARD_PAGES.includes(name));
   $('#home').classList.toggle('hidden', name !== 'home');
-  $('#puzzles').classList.toggle('hidden', name !== 'puzzles');
+  $('#puzzles').classList.toggle('hidden', name !== 'puzzlethemes');
+  $('#side-puzzle').classList.toggle('hidden', name !== 'puzzles');
+  if (name !== 'puzzles') $('#pz-empty').classList.add('hidden');
   if (name !== 'game') $('#challenge').classList.add('hidden');
   $('#side-game').classList.toggle('hidden', name !== 'game');
   $('#openings').classList.toggle('hidden', name !== 'openings');
@@ -98,7 +109,7 @@ function setTheme(t) {
 
 function bindKeys() {
   bindCameraKeys(app.board, () => ['analysis', 'play'].includes(app.route)
-    || app.route === 'practice' || app.route === 'game' || (app.route === 'editor' && app.pages.editor.tool === 'move'));
+    || app.route === 'practice' || app.route === 'game' || app.route === 'puzzles' || (app.route === 'editor' && app.pages.editor.tool === 'move'));
   document.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.target.closest('input, textarea, select, dialog, [contenteditable]') || document.querySelector('dialog[open]') || e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key;
@@ -225,7 +236,7 @@ async function main() {
   });
 
   app.server = await serverInfo();
-  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), home: new Home(app), game: new OnlineGame(app), puzzles: { activate() {} }, rules: rulesPage() };
+  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), home: new Home(app), game: new OnlineGame(app), puzzles: new Puzzles(app), puzzlethemes: new PuzzleThemes(app), rules: rulesPage() };
   try {
     await app.pages.analysis.init();
     setRules(app.pages.analysis.rules);
@@ -238,6 +249,8 @@ async function main() {
   app.pages.games.init();
   app.pages.editor.init();
   await app.pages.practice.init();
+  await app.pages.puzzles.init();
+  app.pages.puzzlethemes.init();
   await app.pages.home.init();
   await app.pages.game.init();
   window.addEventListener('hashchange', route);

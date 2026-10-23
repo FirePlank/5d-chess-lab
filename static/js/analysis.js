@@ -9,6 +9,7 @@ import { positionFromView, continueFrom } from './position.js';
 import { openingAt, renderOpening, openingLink } from './opening.js';
 import { apiGet } from './static-api.js';
 import { sb } from './net.js';
+import { puzzleRecord } from './puzzles.js';
 import { getGame, saveGame, putGame, recordLine } from './history.js';
 import { $, $$, el, toast, fmtScore, fmtNodes, winChance, recordScore, parseLan, store, confirmDialog, onWindow } from './util.js';
 
@@ -95,6 +96,14 @@ export class Analysis {
         this.loadOnline(params.get('online'), params.get('color') === 'b');
         return;
       }
+    } else if (params.get('puzzle')) {
+      // #/analysis/puzzle/<id>[/b]: a puzzle, its solution as the main line, from the solver's side.
+      const key = `puzzle:${params.get('puzzle')}`;
+      if (this.loadedKey !== key) {
+        this.loadedKey = key;
+        this.loadPuzzle(params.get('puzzle'));
+        return;
+      }
     } else if (params.get('file')) {
       const file = params.get('file'), index = +(params.get('index') || 0);
       const key = `${file}#${index}`;
@@ -149,6 +158,19 @@ export class Analysis {
       this.show({ follow: false });
     } catch (e) {
       toast('Could not load the game: ' + e.message, { error: true });
+    }
+  }
+
+  async loadPuzzle(id) {
+    try {
+      const { text, black } = await puzzleRecord(id);
+      // At the puzzle's position, its solution ahead.
+      this.load(text, null, { quiet: true, prepare: (r) => r.mainline[0] });
+      this.flipped = black;
+      this.applyFlip();
+      this.show({ follow: false });
+    } catch (e) {
+      toast('Could not load the puzzle: ' + e.message, { error: true });
     }
   }
 

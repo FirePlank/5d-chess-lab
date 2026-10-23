@@ -96,12 +96,56 @@
   </section>
 
   <!-- ============================== Puzzles (coming) -->
-  <section id="puzzles" class="puzzles hidden" aria-label="Puzzles">
-    <div class="puzzles-card">
-      <svg class="puzzles-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-puzzle"/></svg>
-      <h1>Puzzles</h1>
-      <p>Find the best action in positions from real games: mates through time, timeline forks and more. Coming soon.</p>
-      <div class="row puzzles-links"><a class="btn primary" href="#/practice">Try checkmate practice</a><a class="btn" href="#/">Play a game</a></div>
+  <!-- ============================== Puzzle themes: rating, filters, themes, history -->
+  <section id="puzzles" class="pzh hidden" aria-label="Puzzle themes">
+    <div class="pzh-inner">
+      <header class="pzh-head">
+        <div>
+          <h1>Puzzles</h1>
+          <p class="muted">Positions Kairos found in its own games: mates through time, timeline forks, combinations over many boards. Pick a theme, or just start.</p>
+        </div>
+        <a class="btn primary pzh-start" href="#/puzzles?new=1"><svg aria-hidden="true"><use href="#i-puzzle"/></svg>Start training</a>
+      </header>
+      <p class="pzh-error hidden" id="pzh-error"></p>
+      <div class="pzh-top">
+        <div class="panel pzh-stats">
+          <div class="pzh-stat main"><span class="pzh-stat-v" id="pzh-rating">…</span><span class="pzh-stat-k">Puzzle rating</span></div>
+          <div class="pzh-stat"><span class="pzh-stat-v" id="pzh-solved">…</span><span class="pzh-stat-k">Solved</span></div>
+          <div class="pzh-stat"><span class="pzh-stat-v" id="pzh-played">…</span><span class="pzh-stat-k">Played</span></div>
+          <div class="pzh-stat"><span class="pzh-stat-v" id="pzh-left">…</span><span class="pzh-stat-k">New to you</span></div>
+        </div>
+        <div class="panel pzh-filters">
+          <div class="pzh-filter">
+            <span class="pzh-label">Difficulty</span>
+            <div class="seg pzh-seg" id="pzh-difficulty" role="group" aria-label="Difficulty"></div>
+          </div>
+          <div class="pzh-filter">
+            <span class="pzh-label">Rating range</span>
+            <div class="pzh-range">
+              <input type="number" id="pzh-min" min="0" max="4000" step="50" placeholder="Any" aria-label="Lowest rating">
+              <span class="muted">to</span>
+              <input type="number" id="pzh-max" min="0" max="4000" step="50" placeholder="Any" aria-label="Highest rating">
+              <button type="button" class="link-btn hidden" id="pzh-range-clear">Clear</button>
+            </div>
+            <div class="pzh-presets" id="pzh-presets">
+              <button type="button" data-min="" data-max="">Any</button>
+              <button type="button" data-min="" data-max="1000">Under 1000</button>
+              <button type="button" data-min="1000" data-max="1400">1000–1400</button>
+              <button type="button" data-min="1400" data-max="1800">1400–1800</button>
+              <button type="button" data-min="1800" data-max="2200">1800–2200</button>
+              <button type="button" data-min="2200" data-max="">2200+</button>
+            </div>
+            <span class="pzh-hint muted" id="pzh-range-hint"></span>
+          </div>
+          <label class="pzh-filter pzh-switch"><span class="switch"><input type="checkbox" id="pzh-replay"><span></span></span>Include puzzles you have played</label>
+          <p class="pzh-note muted" id="pzh-filter-note"></p>
+        </div>
+      </div>
+      <div id="pzh-groups"></div>
+      <section class="pzh-group hidden" id="pzh-history-box">
+        <h2>Your latest puzzles</h2>
+        <div class="pz-chips" id="pzh-history"></div>
+      </section>
     </div>
   </section>
 
@@ -151,6 +195,15 @@
           </div>
         </header>
         <div id="practice-groups"></div>
+      </div>
+    </section>
+    <!-- Puzzles: nothing to solve (none left in the theme and range, or the server is away). -->
+    <section class="pz-empty hidden" id="pz-empty" aria-live="polite">
+      <div class="pz-empty-card">
+        <svg class="pz-empty-icon" aria-hidden="true"><use href="#i-puzzle"/></svg>
+        <h1 id="pz-empty-title"></h1>
+        <p class="muted" id="pz-empty-text"></p>
+        <div class="row"><a class="btn primary" href="#/puzzles/themes">Puzzle themes</a><button type="button" class="btn" id="pz-empty-retry">Try again</button></div>
       </div>
     </section>
     <div class="board-area" id="board-area">
@@ -326,6 +379,45 @@
             <button class="action-btn" id="practice-back" title="Back to the list" aria-label="Back to the list"><svg viewBox="-1 -1 26 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="5" x2="22" y2="5"/><line x1="9" y1="12" x2="22" y2="12"/><line x1="9" y1="19" x2="22" y2="19"/><line x1="3" y1="5" x2="3" y2="5"/><line x1="3" y1="12" x2="3" y2="12"/><line x1="3" y1="19" x2="3" y2="19"/></svg></button>
           </div>
           <div class="player-bar" id="practice-bottom"><span class="pname" id="practice-bottom-name">You</span></div>
+        </div>
+      </div>
+
+      <!-- Puzzles (lichess's trainer): the theme, the puzzle, what to do, the moves, the session. -->
+      <div class="side-view hidden" id="side-puzzle">
+        <div class="panel pz-top">
+          <a class="pz-back" href="#/puzzles/themes" title="Puzzle themes, filters and your history"><svg aria-hidden="true"><use href="#i-prev"/></svg><span>Puzzle themes</span></a>
+          <div class="pz-theme"><strong id="pz-theme-name"></strong><span class="muted" id="pz-theme-desc"></span></div>
+          <label class="pz-difficulty"><span class="muted">Difficulty</span><select id="pz-difficulty"></select></label>
+        </div>
+        <div id="pz-main" class="pz-main">
+          <div class="panel pz-feedback">
+            <div class="pz-fb play" id="pz-fb">
+              <span class="pz-fb-icon"><img id="pz-fb-turn" alt="" src="pieces/king-white.svg" draggable="false"><svg class="ok" aria-hidden="true"><use href="#i-check"/></svg><svg class="bad" aria-hidden="true"><use href="#i-x"/></svg><span class="spin"></span></span>
+              <div class="pz-fb-body"><strong id="pz-fb-title"></strong><span id="pz-fb-text"></span></div>
+            </div>
+            <div class="pz-tools" id="pz-play-tools">
+              <button type="button" class="ctrl-text" id="pz-hint" title="Show the square to move from (H); the round is then unrated"><svg aria-hidden="true"><use href="#i-search"/></svg><span id="pz-hint-text">Get a hint</span></button>
+              <button type="button" class="ctrl-text invisible" id="pz-solution" title="Play the solution on the board (counts as not solved)"><svg aria-hidden="true"><use href="#i-eye"/></svg>View the solution</button>
+            </div>
+            <div class="pz-after hidden" id="pz-after">
+              <span class="pz-result" id="pz-result"></span>
+              <button type="button" class="btn primary block" id="pz-next" title="N">Continue training</button>
+              <div class="pz-after-links">
+                <a class="ctrl-text" id="pz-analyse" href="#/analysis"><svg aria-hidden="true"><use href="#i-search"/></svg>Analysis board</a>
+                <button type="button" class="ctrl-text" id="pz-retry"><svg aria-hidden="true"><use href="#i-undo"/></svg>Play again</button>
+              </div>
+            </div>
+          </div>
+          <div class="panel pz-meta">
+            <div class="pz-meta-row"><span>Puzzle <a id="pz-id" href="#/puzzles"></a></span><span class="muted" id="pz-plays"></span></div>
+            <div class="pz-meta-row"><span>Rating: <strong id="pz-rating">hidden</strong></span></div>
+            <div class="pz-themes" id="pz-themes"></div>
+          </div>
+          <div class="panel moves pz-moves" id="pz-moves"></div>
+        </div>
+        <div class="panel pz-session">
+          <div class="pz-meta-row"><span>Your puzzle rating</span><strong class="pz-my-rating" id="pz-my-rating">…</strong></div>
+          <div id="pz-session-box" class="hidden"><div class="pz-chips" id="pz-session"></div></div>
         </div>
       </div>
 

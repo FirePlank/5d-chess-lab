@@ -99,6 +99,7 @@ jobs:
         run: |
           npm install --no-save --prefix .tools @electric-sql/pglite@0.5.11
           node tests/online-sql.mjs
+          node tests/puzzles-sql.mjs
           deno run -A tests/online-fn.ts
 
       - name: Checks of the browser build

@@ -92,7 +92,7 @@ export class MultiverseView {
     this.anims = new Map(); // "l,v" -> {t0, dur, dy, off, alpha}: boards sliding in
     this.leaving = []; // {b, t0, dur, dy, off, alpha}: boards sliding out
     this.lastStep = 0;
-    this.overlay = { selected: null, targets: [], pv: [], hover: null, readonly: false };
+    this.overlay = { selected: null, targets: [], pv: [], hint: [], hover: null, readonly: false };
     // Checks: timelines whose "!" badge was clicked (their checks are shown), the badges drawn
     // last frame (for clicks), and the badge under the pointer.
     this.revealed = new Set();
@@ -903,6 +903,17 @@ export class MultiverseView {
     }
     if (o.hover && !o.readonly && this.isInteresting(o.hover)) fill(o.hover.l, o.hover.v, o.hover.x, o.hover.y, 'rgba(255,255,255,.18)');
     if (o.selected) fill(o.selected.l, 2 * o.selected.t + o.selected.c, o.selected.x, o.selected.y, o.peek ? C.peekSelect : C.select);
+    // A puzzle hint: a green ring on the square to move from (as lichess's).
+    for (const h of o.hint || []) {
+      const vv = 2 * h.t + h.c;
+      if (!this.boards.has(`${h.l},${vv}`)) continue;
+      const [cx, cy] = this.squareCenter(h.l, vv, h.x, h.y);
+      ctx.strokeStyle = 'rgba(21, 120, 27, .9)';
+      ctx.lineWidth = 0.09;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 0.43, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
 
   /** Where the selected piece can go: dots on empty squares, corners on captures. */

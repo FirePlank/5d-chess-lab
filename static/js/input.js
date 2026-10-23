@@ -15,9 +15,10 @@ export class MoveInput {
     this.selected = null;
     this.targets = [];
     // Auto-submit (toolbar) sends a lone action as soon as nothing else can be played. It is
-    // on by default on the analysis board, where a move is easily taken back, and off in play,
-    // where, as in the Steam game, every action waits for Submit. Remembered per page.
-    this.autoSubmitBy = { analysis: true, play: false, ...(store('autoSubmitBy') || {}) };
+    // on by default on the analysis board, where a move is easily taken back, and in puzzles
+    // (as lichess's, where a move is played at once), and off in play, where, as in the Steam
+    // game, every action waits for Submit. Remembered per page.
+    this.autoSubmitBy = { analysis: true, play: false, puzzle: true, ...(store('autoSubmitBy') || {}) };
     this.peek = false;
     board.onSquare = (sq) => this.click(sq);
     // A right-click with a piece selected only deselects it (as 5dcol); otherwise it draws.
@@ -44,7 +45,7 @@ export class MoveInput {
 
   showAutoSubmit() {
     const tool = $('#tool-autosubmit');
-    const where = this.mode === 'play' ? 'in play' : 'on the analysis board';
+    const where = this.mode === 'play' ? 'in play' : this.mode === 'puzzle' ? 'in puzzles' : 'on the analysis board';
     tool.classList.toggle('on', this.autoSubmit);
     tool.title = this.autoSubmit
       ? `Auto-submit is on ${where}: an action is sent once nothing else can be played (click to turn off)`

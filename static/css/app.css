@@ -998,13 +998,135 @@ html[data-theme="light"] .home { --hero-top: #646464; --hero-bottom: #111; }
   .seek-row { grid-template-columns: 1fr 1.2fr 1fr; padding: 10px 12px; font-size: 13px; }
 }
 
-/* ------------------------------------------------------------ puzzles (coming) */
-.puzzles { height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px 16px; overflow-y: auto; }
-.puzzles-card { max-width: 520px; text-align: center; padding: 40px 32px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
-.puzzles-card h1 { margin: 12px 0 8px; font-size: 26px; color: var(--strong); }
-.puzzles-card p { margin: 0 0 22px; color: var(--muted); }
-.puzzles-icon { width: 48px; height: 48px; color: var(--accent-text); }
-.puzzles-links { justify-content: center; }
+/* ------------------------------------------------------------ puzzles */
+/* The trainer (after lichess's): the theme and difficulty, then the feedback box (your turn,
+   right, wrong, solved) with the hint and the solution, the puzzle (rating and themes once it
+   is over), the moves, and the session's rounds. */
+.invisible { visibility: hidden; }
+#board.pz-hidden { visibility: hidden; }
+#side-puzzle.loading .pz-main { visibility: hidden; }
+.pz-main { display: flex; flex-direction: column; gap: var(--s2); flex: 1 1 0; min-height: 0; }
+.pz-main > * { flex: none; }
+.pz-top { display: flex; flex-direction: column; gap: 6px; padding: var(--s2) var(--s3) var(--s3); }
+.pz-back { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; margin-left: -6px; padding: 2px 6px; border-radius: var(--r-sm); color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none; }
+.pz-back svg { width: 14px; height: 14px; }
+.pz-back:hover { color: var(--strong); background: var(--hover); }
+.pz-theme { display: flex; flex-direction: column; gap: 2px; }
+.pz-theme strong { font-size: 16px; color: var(--strong); }
+.pz-theme span { font-size: 12.5px; line-height: 1.4; }
+.pz-difficulty { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); font-size: 13px; }
+.pz-difficulty select { min-width: 120px; }
+
+.pz-feedback { overflow: hidden; }
+.pz-fb { display: flex; align-items: center; gap: 14px; padding: 16px; min-height: 84px; }
+.pz-fb-icon { position: relative; flex: none; width: 48px; height: 48px; display: grid; place-items: center; }
+.pz-fb-icon > * { display: none; }
+.pz-fb-icon img { width: 48px; height: 48px; }
+.pz-fb-icon svg { width: 40px; height: 40px; }
+.pz-fb.play .pz-fb-icon img { display: block; }
+.pz-fb.good .ok, .pz-fb.reply .ok, .pz-fb.win .ok, .pz-fb.done .ok, .pz-fb.view .ok { display: block; color: var(--good); }
+.pz-fb.view .ok { color: var(--muted); }
+.pz-fb.fail .bad { display: block; color: var(--bad); }
+.pz-fb.judge .spin { display: block; width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--border-strong); border-top-color: var(--accent); animation: pz-spin .8s linear infinite; }
+@keyframes pz-spin { to { transform: rotate(360deg); } }
+.pz-fb-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pz-fb-body strong { font-size: 17px; color: var(--strong); }
+.pz-fb-body span { color: var(--muted); }
+.pz-fb-body span:empty { display: none; }
+.pz-fb.good strong, .pz-fb.win strong { color: var(--good); }
+.pz-fb.fail strong { color: var(--bad); }
+.pz-tools { display: flex; border-top: 1px solid var(--border); }
+.pz-tools .ctrl-text + .ctrl-text { border-left: 1px solid var(--border); }
+.pz-tools .ctrl-text:disabled { opacity: .45; cursor: default; background: none; }
+.pz-after { display: flex; flex-direction: column; gap: var(--s2); padding: 0 16px 14px; }
+.pz-result { font-size: 13px; color: var(--muted); }
+.pz-result:empty { display: none; }
+.pz-result.up { color: var(--good); font-weight: 600; }
+.pz-result.down { color: var(--bad); font-weight: 600; }
+.pz-after-links { display: flex; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+.pz-after-links .ctrl-text { height: 34px; }
+.pz-after-links .ctrl-text + .ctrl-text { border-left: 1px solid var(--border); }
+
+.pz-meta, .pz-session { display: flex; flex-direction: column; gap: 6px; padding: 10px var(--s3); font-size: 13px; }
+.pz-meta-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.pz-meta a { color: var(--accent-text); text-decoration: none; font-weight: 600; }
+.pz-meta a:hover { text-decoration: underline; }
+.pz-themes { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
+.pz-meta a.pz-theme-chip { padding: 2px 8px; border-radius: 10px; background: var(--inset); color: var(--text); font-weight: 500; }
+.pz-meta a.pz-theme-chip:hover { background: var(--accent-soft); text-decoration: none; }
+.pz-moves { flex: 1 1 0; min-height: 100px; }
+.pz-my-rating { font-size: 18px; color: var(--strong); font-variant-numeric: tabular-nums; }
+.pz-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.pz-chip { min-width: 34px; padding: 2px 6px; border-radius: 4px; text-align: center; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; text-decoration: none; color: #fff; }
+.pz-chip.win { background: var(--good); }
+.pz-chip.loss { background: var(--bad); }
+.pz-chip.cur { outline: 2px solid var(--strong); outline-offset: 1px; }
+.pz-chip:hover { filter: brightness(1.12); }
+
+.pz-empty { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px 16px; background: var(--page); overflow-y: auto; }
+.pz-empty-card { max-width: 480px; text-align: center; padding: 36px 28px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+.pz-empty-card h1 { margin: 12px 0 8px; font-size: 22px; color: var(--strong); }
+.pz-empty-card p { margin: 0 0 20px; }
+.pz-empty-card .row { justify-content: center; }
+.pz-empty-icon { width: 44px; height: 44px; color: var(--accent-text); }
+
+/* The themes page: your numbers and the filters, then every theme by group, then your rounds. */
+.pzh { height: 100%; overflow-y: auto; }
+.pzh-inner { max-width: 1120px; margin: 0 auto; padding: 28px 20px 56px; display: flex; flex-direction: column; gap: 24px; }
+.pzh-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.pzh-head h1 { margin: 0 0 6px; font-size: 28px; color: var(--strong); }
+.pzh-head p { margin: 0; max-width: 620px; }
+.pzh-start { height: 42px; padding: 0 18px; font-size: 15px; gap: 8px; }
+.pzh-start svg { width: 18px; height: 18px; }
+.pzh-error { margin: 0; padding: 10px 12px; border-radius: var(--r-sm); color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.pzh-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: stretch; }
+.pzh-stats { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; align-items: center; padding: 16px; }
+.pzh-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.pzh-stat + .pzh-stat { border-left: 1px solid var(--border); }
+.pzh-stat-v { font-size: 22px; font-weight: 700; color: var(--strong); font-variant-numeric: tabular-nums; }
+.pzh-stat.main .pzh-stat-v { font-size: 32px; color: var(--accent-text); }
+.pzh-stat-k { font-size: 12px; color: var(--muted); }
+.pzh-filters { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; }
+.pzh-filter { display: flex; flex-direction: column; gap: 6px; }
+.pzh-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.pzh-seg { margin: 0; align-self: flex-start; flex-wrap: wrap; }
+.pzh-seg.dim { opacity: .5; }
+.pzh-range { display: flex; align-items: center; gap: 8px; }
+.pzh-range input { width: 96px; }
+.pzh-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.pzh-presets button { padding: 3px 10px; border: 1px solid var(--border); border-radius: 12px; background: none; color: var(--text); font-size: 12px; }
+.pzh-presets button:hover { border-color: var(--faint); color: var(--strong); }
+.pzh-presets button.on { border-color: var(--accent); background: var(--accent-soft); color: var(--strong); }
+.pzh-hint { font-size: 12px; }
+.pzh-switch { flex-direction: row; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
+.pzh-note { margin: 0; font-size: 12.5px; }
+.pzh-group h2 { margin: 0 0 10px; font-size: 15px; color: var(--strong); }
+#pzh-groups { display: flex; flex-direction: column; gap: 22px; }
+.pzh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.pzh-theme { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r); background: var(--panel); color: var(--text); text-decoration: none; transition: border-color .15s, transform .15s; }
+.pzh-theme:hover { border-color: var(--accent); transform: translateY(-1px); }
+.pzh-theme.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.pzh-theme.done { opacity: .6; }
+.pzh-theme-name { font-weight: 700; color: var(--strong); }
+.pzh-theme-desc { flex: 1; font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+.pzh-theme-foot { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.pzh-count { flex: none; font-size: 12px; font-weight: 600; color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.pzh-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--inset); overflow: hidden; }
+.pzh-bar i { display: block; height: 100%; background: var(--good); }
+@media (max-width: 900px) {
+  .pzh-top { grid-template-columns: 1fr; }
+}
+/* Phones: the panels stack under the board at their own heights, what to do first. */
+@media (max-width: 800px) and (orientation: portrait), (max-width: 560px) {
+  .pz-main { flex: none; }
+  .pz-moves { flex: none; min-height: 0; max-height: 240px; }
+  #side-puzzle .pz-top { order: 1; }
+  #side-puzzle .pz-session { order: 2; }
+}
+@media (max-width: 520px) {
+  .pzh-stats { grid-template-columns: 1fr 1fr; row-gap: 12px; }
+  .pzh-stat:nth-child(3) { border-left: 0; }
+}
 
 /* ------------------------------------------------------------ the game options dialog */
 .game-setup { width: min(520px, calc(100vw - 2 * var(--s3))); }
