@@ -3,7 +3,7 @@
 // is legal, completes its action and meets its goal, every explained wrong move is legal, and
 // the opponent's moves are legal. Needs the browser core (cargo wasm): node tests/tutorial.mjs
 import assert from 'node:assert/strict';
-import { LESSONS, parseMoves, parsePlace, marksOf, moveLan } from '../static/js/lessons.js';
+import { LESSONS, CATEGORIES, parseMoves, parsePlace, marksOf, moveLan } from '../static/js/lessons.js';
 import { loadCore } from './core.mjs';
 
 const core = await loadCore();
@@ -21,6 +21,7 @@ for (const lesson of LESSONS) {
   assert.ok(!ids.has(lesson.id), `lesson id ${lesson.id} is unique`);
   ids.add(lesson.id);
   assert.ok(lesson.title && lesson.blurb && lesson.recap?.length && lesson.steps.length, `${lesson.id}: title, blurb, recap, steps`);
+  assert.ok(!lesson.category || CATEGORIES.some((c) => c.key === lesson.category), `${lesson.id}: a known category`);
   let node = null;
   lesson.steps.forEach((step, i) => {
     const where = `${lesson.id} step ${i + 1}`;
@@ -35,6 +36,8 @@ for (const lesson of LESSONS) {
       if (step.then) node = call({ cmd: 'play', node, moves: parseMoves(step.then) }).node;
       const v = view(node);
       assert.equal(v.status, 'playing', 'the game is on');
+      // A position the game could not reach: the side to move able to capture a royal at once.
+      assert.ok(!call({ cmd: 'inspect', text: v.position }).capture, 'the side to move cannot capture a royal at once');
       assert.ok(step.inactive || v.timelines.every((tl) => tl.active), 'every timeline is active (an inactive one only where the lesson makes it)');
       assert.equal(v.checks.length > 0, !!step.check, step.check ? 'the side to move is in check' : 'no check (mark the step `check` if meant)');
       const marks = marksOf(step.mark, v.player);

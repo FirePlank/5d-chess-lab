@@ -7,7 +7,7 @@
 // lessons themselves are in lessons.js; nothing here is sent anywhere.
 import { Rules } from './kairos.js';
 import { sounds } from './sound.js';
-import { LESSONS, parseMoves, marksOf, onTarget, moveLan } from './lessons.js';
+import { LESSONS, CATEGORIES, parseMoves, marksOf, onTarget, moveLan } from './lessons.js';
 import { $, el, toast, store } from './util.js';
 
 const STORAGE_KEY = 'tutorial';
@@ -118,12 +118,23 @@ export class Tutorial {
     const next = LESSONS.find((l) => !got[l.id]);
     $('#tut-progress-count').textContent = `${done} / ${LESSONS.length}`;
     $('#tut-progress-fill').style.width = `${(100 * done) / LESSONS.length}%`;
-    $('#tut-lessons').replaceChildren(...LESSONS.map((l, i) => el('button', {
+    // Sections, as lichess.org/learn's: each lesson a card with its number (or its piece).
+    const card = (l) => el('button', {
       type: 'button', class: 'tut-lesson' + (got[l.id] ? ' done' : '') + (l === next ? ' next' : ''), dataset: { lesson: l.id },
     },
-    el('span', { class: 'tut-lesson-num', text: String(i + 1) }),
+    l.piece ? el('img', { class: 'tut-lesson-piece', src: `pieces/${l.piece}-white.svg`, alt: '', draggable: 'false' })
+      : el('span', { class: 'tut-lesson-num', text: String(LESSONS.indexOf(l) + 1) }),
     el('span', { class: 'tut-lesson-body' }, el('strong', { text: l.title }), el('span', { class: 'muted', text: l.blurb })),
-    stars(got[l.id] || 0))));
+    stars(got[l.id] || 0));
+    $('#tut-lessons').replaceChildren(...CATEGORIES.map((c) => {
+      const lessons = LESSONS.filter((l) => (l.category || 'multiverse') === c.key);
+      const earned = lessons.reduce((n, l) => n + (got[l.id] || 0), 0);
+      return el('section', { class: 'tut-categ' },
+        el('header', { class: 'tut-categ-head' },
+          el('h2', { text: c.name }), el('span', { class: 'muted', text: `${earned} / ${3 * lessons.length} stars` })),
+        el('p', { class: 'muted tut-categ-blurb', text: c.blurb }),
+        el('div', { class: 'tut-categ-lessons' }, ...lessons.map(card)));
+    }));
   }
 
   // ---------------------------------------------------------------- lessons and steps

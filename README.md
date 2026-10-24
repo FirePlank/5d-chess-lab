@@ -21,13 +21,15 @@ an unofficial fan project, not affiliated with Thunkspace.
   runs in your browser and its clock waits while you are away. Players are anonymous: a random
   token in your browser is your identity.
 - **Tutorial** (Learn, `#/tutorial`; the home page offers it to first-time visitors, after
-  infinitechess.org's "New?" prompt): ten short lessons that teach 5D chess by doing, after
-  lichess.org/learn. Boards and time, travel and new timelines, the present, moving between
-  timelines and the void, active timelines, each piece through the four directions, check and
-  checkmate. Each step asks for one move, click or answer, with marks on the board; wrong moves
-  are explained and taken back, with hints that grow on repeated misses; stars per lesson are
-  kept in your browser. The lessons are data (`static/js/lessons.js`), and `tests/tutorial.mjs`
-  plays every step through the rules core.
+  infinitechess.org's "New?" prompt): short lessons that teach 5D chess by doing, in sections
+  after lichess.org/learn. The multiverse (boards in time, travel and new timelines, the present,
+  moving between timelines and the void, active and inactive timelines), the pieces one by one
+  through the four dimensions, fundamentals (check across timelines and through time, checkmate,
+  stalemate or mate) and the fairy pieces. Each step asks for one move, click or answer, with
+  marks on the board; wrong moves are explained and taken back, with hints that grow on repeated
+  misses; every action waits for Submit; stars per lesson are kept in your browser. The lessons
+  are data (`static/js/lessons.js`), and `tests/tutorial.mjs` plays every step through the rules
+  core (and rejects positions a game could not reach).
 - **Checkmate practice** (Learn): the 5D game's practice positions against Kairos defending the
   king, with progress, badges, undo and restart; kept in your browser.
 - **Analysis**: paste or drop a game (5dpgn, 5DFEN, a 5DUCI `position … moves …` line, or

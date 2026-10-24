@@ -28,6 +28,50 @@ const BRANCHED = `${TRAVEL} (0T3)a3(0T2)a3 submit (1T2)e5d5 (0T3)c4(0T2)c4 submi
 // White leads by one timeline (Black has made none).
 const LEAD = `${TRAVEL} (0T3)a3(0T2)a3 submit (1T2)e5d5 submit`;
 
+// Single-timeline histories (turns 1-3, White to move on turn 3) and small multiverses for the
+// piece lessons: a white piece, black knights to capture, kings out of the way.
+const RB_PAST = small('4k/5/n4/5/R3K:0:1:w', '4k/5/n4/5/R2K1:0:1:b', '4k/2n2/5/5/R2K1:0:2:w', '4k/2n2/R4/5/3K1:0:2:b', '3k1/2n2/R4/5/3K1:0:3:w');
+const RB_FIND = small('4k/5/n4/5/K4:0:1:w', '4k/5/n4/5/1K3:0:1:b', '4k/5/5/2n2/1K3:0:2:w', '4k/5/R4/2n2/1K3:0:2:b', '4k/5/R4/2n2/1K3:0:3:w');
+// Three timelines on turn 3: L1 already ahead (turn 4), so L0 and L2 are the present (and
+// L-1, ahead too, keeps L2 active).
+const tl3 = (l0, l1, l2) => small('3k1/5/5/1K3/5:-1:4:w', `${l0}:0:3:w`, `${l1}:1:3:w`, `${l1}:1:3:b`, '3k1/5/5/1K3/5:1:4:w', `${l2}:2:3:w`);
+const ROOK_L = tl3('4k/5/5/5/K1R2', '4k/5/5/1K3/5', '4k/5/5/5/K1n2');
+const ROOK_BLOCKED = tl3('4k/5/5/5/K1R2', '4k/5/5/1K3/2B2', '4k/5/5/5/K1n2');
+const Q_LINE = tl3('4k/5/5/5/K1Q2', '4k/5/5/1K3/5', '4k/5/5/5/K1n2');
+const B_RL = tl3('4k/5/5/5/K1B2', '4k/5/5/1K3/5', '4k/5/2n2/5/K4');
+const B_ONE = small('3k1/5/2B2/5/K4:0:1:w', '3k1/5/2B2/5/1K3:0:1:b', '3k1/5/2Bn1/5/1K3:0:2:w', '3k1/5/2Bn1/5/K4:0:2:b', '3k1/5/2B2/5/K3n:0:3:w');
+const B_TWO = small('3k1/5/2B1n/5/K4:0:1:w', '3k1/5/2B1n/5/1K3:0:1:b', '3k1/2n2/2B2/5/1K3:0:2:w', '3k1/2n2/2B2/5/K4:0:2:b', '3k1/2n2/2B2/5/K4:0:3:w');
+// A second timeline whose turn-2 board holds the target, its newest board Black's (turn 3).
+const withL1 = (piece, sq, l1) => small(`3k1/5/${sq}/5/K4:0:1:w`, `3k1/5/${sq}/5/1K3:0:1:b`, `3k1/5/${sq}/5/1K3:0:2:w`, `3k1/5/${sq}/5/K4:0:2:b`, `3k1/5/${sq}/5/K4:0:3:w`,
+  `4k/5/${l1}/5/K4:1:2:w`, `4k/5/${l1}/5/1K3:1:2:b`, '4k/5/5/5/1K3:1:3:w', '3k1/5/5/5/1K3:1:3:b').replaceAll('@', piece);
+const B_TL = withL1('B', '2@2', '2n2');
+const q3 = (p) => small(`4k/5/5/2${p}2/K4:0:1:w`, `4k/5/5/2${p}2/1K3:0:1:b`, `4k/5/3n1/2${p}2/1K3:0:2:w`, `4k/5/3n1/2${p}2/K4:0:2:b`, `4k/5/5/2${p}2/K3n:0:3:w`);
+const q4 = (p) => small(`4k/5/5/2${p}2/K4:0:1:w`, `4k/5/5/2${p}2/1K3:0:1:b`, `4k/5/5/2${p}2/1K3:0:2:w`, `4k/5/5/2${p}2/K4:0:2:b`, `4k/5/5/2${p}2/K4:0:3:w`,
+  '4k/5/3n1/5/K4:1:2:w', '4k/5/3n1/5/1K3:1:2:b', '4k/5/5/5/1K3:1:3:w', '3k1/5/5/5/1K3:1:3:b');
+const Q_THREE = q3('Q');
+const Q_FOUR = q4('Q');
+const K_GUARD = small('4k/5/5/5/2K2:0:1:w', '4k/5/5/5/3r1:1:1:w', '4k/5/5/5/3r1:1:1:b');
+const N_PAST = small('k4/5/5/1Nn2/3K1:0:1:w', 'k4/5/5/1Nn2/2K2:0:1:b', 'k4/5/5/1N1n1/2K2:0:2:w', 'k4/5/5/1N1n1/3K1:0:2:b', 'k4/5/5/1N3/3K1:0:3:w');
+const N_TL = small('k4/5/5/1N3/3K1:0:1:w', 'k4/5/5/1N3/2K2:0:1:b', 'k4/5/5/1N3/2K2:0:2:w', 'k4/5/5/1N3/3K1:0:2:b', 'k4/5/5/1N3/3K1:0:3:w',
+  'k4/5/5/1n3/4K:1:1:w', 'k4/5/5/1n3/4K:1:1:b', 'k4/5/5/5/4K:1:2:w', 'k4/5/5/5/4K:1:2:b', 'k4/5/5/5/4K:1:3:w', '1k3/5/5/5/4K:1:3:b');
+const N_VOID = small('4k/5/5/5/1NK2:0:1:w', '4k/5/5/5/1N1K1:0:1:b', '3k1/5/5/5/1N1K1:0:2:w', '3k1/5/5/5/1NK2:0:2:b', '4k/5/5/5/1NK2:0:3:w',
+  '4k/5/5/5/2K2:-1:4:w', '4k/5/5/5/2K2:1:4:w', '4k/5/5/5/n2K1:2:2:w', '4k/5/5/5/n2K1:2:2:b', '4k/5/5/5/n2K1:2:3:w');
+const P_CAPTURE = small('4k/5/2P2/5/K4:0:1:w', '4k/5/2P2/5/1K3:0:1:b', '4k/5/2P2/5/1K3:0:2:w', '4k/5/2P2/5/K4:0:2:b', '4k/5/2P2/5/K4:0:3:w',
+  '4k/5/2n2/5/K4:-1:2:w', '4k/5/2n2/5/1K3:-1:2:b', '4k/5/5/5/1K3:-1:3:w', '3k1/5/5/5/1K3:-1:3:b');
+// A black rook on L1 attacks the white king on L0 across timelines.
+const CHECK = small('4k/5/2N2/5/2K2:0:1:w', '3k1/5/5/5/B1r2:1:1:w');
+// White's king left e1 on turn 2; Black's rook has reached e1 since and can slide back to turn 1.
+const TIME_CHECK = '(0T1)a1a2 submit (0T1)a4e4 submit (0T2)e1d2 submit (0T2)e4e1 submit';
+// The 5D game's "Tricky Checkmates 3" (two even timelines, +0 and -0): mate by making Black
+// play both, where its only piece on +0 is a pawn.
+const TRICKY = 'size 5x5 even fen [5/p*4/5/5/P*P*3:+0:1:w] [4k*/5/5/K4/1B3:-0:1:w]';
+const FAIRY_PRINCESS = B_ONE.replace(/B/g, 'S');
+const FAIRY_UNICORN = q3('U');
+const FAIRY_DRAGON = q4('D');
+const FAIRY_ROYAL = small('1k3/5/2Y2/5/2r2:0:1:w');
+const FAIRY_COMMON = small('4k/5/2C2/K4/2r2:0:1:w');
+const FAIRY_BRAWN = small('4k/5/3n1/5/K4:-1:1:w', '4k/5/2W2/5/K4:0:1:w');
+
 /** Goals: each judges a submitted action ({moves, before, after}): true, or why not. */
 export const goals = {
   /** Any complete action. */
@@ -40,6 +84,14 @@ export const goals = {
   mate: (why) => ({ after }) => after.status === 'checkmate' || (after.status === 'stalemate'
     ? 'Stalemate! Black has no move, but isn’t in check: that’s only a draw.' : why || 'Not mate: Black still has a way out.'),
 };
+
+/** The sections of the lesson list (after lichess.org/learn's), in order. */
+export const CATEGORIES = [
+  { key: 'multiverse', name: 'The multiverse', blurb: 'How boards, time and timelines work: the rules of the board itself.' },
+  { key: 'pieces', name: 'The pieces', blurb: 'How each piece moves through the four dimensions.' },
+  { key: 'fundamentals', name: 'Fundamentals', blurb: 'Check, checkmate and stalemate across time.' },
+  { key: 'advanced', name: 'Advanced', blurb: 'The fairy pieces of the 5D game’s variants.' },
+];
 
 export const LESSONS = [
   {
@@ -114,7 +166,7 @@ export const LESSONS = [
         ok: 'That’s the new timeline, **L1**. The first one is L0. The old L0 board still has one rook.',
       },
       {
-        type: 'read', say: 'Up and down, between timelines, is the fourth direction: **L**. Timelines you make appear **below**; Black’s appear **above**.',
+        type: 'read', say: 'Up and down, between timelines, is the fourth direction: **L**. Timelines you make appear **below**; your opponent’s appear **above**.',
         mark: { boards: ['(1T2b)'] },
       },
       {
@@ -230,8 +282,8 @@ export const LESSONS = [
     id: 'active', title: 'Active timelines', blurb: 'Why you can’t branch forever.',
     recap: [
       'Each side may lead by one timeline at most.',
-      'Extra timelines are inactive: faded, they don’t count for the present, and nobody has to play them.',
-      'When the other side catches up, they become active again.',
+      'Extra timelines are inactive: faded, they don’t hold the present back, and nobody has to play them.',
+      'The game simply moves on without them; once the other side catches up, they become active again.',
     ],
     steps: [
       {
@@ -253,9 +305,25 @@ export const LESSONS = [
         ok: 'L2 is faded: **inactive**. It doesn’t count for the present, and nobody has to play on it.',
       },
       {
-        type: 'read', then: '(0T3)c4(0T2)c4 (1T3)d5d4 (2T3)e5d5',
-        say: 'Black just made a timeline of its own (L−1). You lead by only one again, so L2 is **active** once more.',
-        mark: { boards: ['(2T4w)', '(-1T3w)'] },
+        type: 'read', inactive: true, then: '(0T3)c4c5 (1T3)d5e5',
+        say: 'Black played only its two active boards and left L2 alone. The present moved on to turn 4 anyway.',
+        mark: { boards: ['(0T4w)', '(1T4w)'] },
+      },
+      {
+        type: 'click', all: true, inactive: true,
+        say: 'Click every board you must play now.',
+        targets: ['(0T4w)', '(1T4w)'],
+        why: {
+          '(2T3b)': 'L2 is inactive: nobody has to play it, so it doesn’t hold the present back.',
+        },
+        wrong: 'That one is history. Look in the shaded column.',
+        ok: 'Just the two active boards. L2 waits, frozen, as long as it stays inactive.',
+      },
+      {
+        type: 'read', at: [ROOKS, `${LEAD} (1T3)a1(0T3)a1 submit (0T3)c4c5 (1T3)d5e5 submit (0T4)d1e1 (1T4)d1e1 submit`],
+        then: '(0T4)c5(0T3)c5 (1T4)e5d5 (2T3)e5d5',
+        say: 'Now Black makes a timeline of its own (L−1). You lead by one again, so L2 is **active** and back in the present.',
+        mark: { boards: ['(2T4w)', '(-1T4w)'] },
       },
       {
         type: 'choose', say: 'Why do you think this rule exists?',
@@ -264,92 +332,172 @@ export const LESSONS = [
       },
     ],
   },
+
+  // ------------------------------------------------------------------ the pieces
   {
-    id: 'rookbishop', title: 'Rook and bishop', blurb: 'Pieces move in four directions: file, rank, turn and timeline.',
+    id: 'rook', title: 'The rook', blurb: 'One dimension, any distance.', piece: 'rook', category: 'pieces',
     recap: [
-      'Every square has four coordinates: file, rank, turn (T) and timeline (L).',
-      'A rook changes exactly one of them, by any distance.',
-      'A bishop changes exactly two, by the same amount.',
+      'Every square has four coordinates, the four dimensions: file, rank, turn (T) and timeline (L).',
+      'A rook moves along exactly one dimension, as far as it likes.',
+      'Pieces on its path block it, on the board, through time and across timelines.',
     ],
     steps: [
       {
-        type: 'play',
-        at: [small('4k/5/n4/5/R3K:0:1:w', '4k/5/n4/5/R2K1:0:1:b', '4k/2n2/5/5/R2K1:0:2:w', '4k/2n2/R4/5/3K1:0:2:b', '3k1/2n2/R4/5/3K1:0:3:w')],
-        say: 'A **rook** changes one coordinate, any distance. Capture the knight two turns back, on the same square.',
+        type: 'play', at: [RB_PAST],
+        say: 'Four dimensions: file, rank, **turn** and **timeline**. A rook moves along one of them. Capture the knight two turns back.',
         mark: { arrows: ['(0T3)a3>(0T1)a3'] },
         solution: '(0T3)a3(0T1)a3',
         why: { '(0T3)a3(0T2)a3': 'One turn back, a3 is empty. Keep going: two turns back.' },
-        wrong: 'The knight is on a3 two turns ago. Only the turn changes.',
-        ok: 'Captured in the past, and a new timeline branched off, as always.',
+        wrong: 'The knight is on a3, two turns ago. Only the turn changes.',
+        ok: 'Along the turn dimension. The capture in the past branched a new timeline, as always.',
       },
       {
-        type: 'play', at: [small('4k/5/5/5/1KR2:0:1:w', '4k/5/5/5/1Kn2:1:1:w')],
-        say: 'The timeline is a coordinate too. Capture the knight on L1.',
-        solution: '(0T1)c1(1T1)c1',
-        wrong: 'The knight is on the same square, one timeline down.',
-        ok: 'Straight down one timeline: one move played both boards.',
+        type: 'play', at: [ROOK_L],
+        say: 'Along the timeline dimension now: capture the knight on **L2**, two timelines down.',
+        solution: '(0T3)c1(2T3)c1',
+        wrong: 'The knight is on c1 of L2: same square, same turn, two timelines down.',
+        ok: 'Straight past L1, two timelines down. It played both boards, and L1 (ahead of the present) can wait.',
       },
       {
-        type: 'play', goal: goals.to('(0T1)a3', 'That doesn’t capture. Find the knight that differs from your rook in only one coordinate.'),
-        at: [small('4k/5/n4/5/K4:0:1:w', '4k/5/n4/5/1K3:0:1:b', '4k/5/5/2n2/1K3:0:2:w', '4k/5/R4/2n2/1K3:0:2:b', '4k/5/R4/2n2/1K3:0:3:w')],
+        type: 'choose', at: [ROOK_BLOCKED],
+        say: 'Your bishop now stands on c1 of L1. Can the rook still reach the knight on L2?',
+        mark: { squares: ['(1T3w)c1'], arrows: ['(0T3)c1>(2T3)c1'] },
+        options: ['Yes, it jumps over', 'No: the bishop blocks the way'], answer: 1,
+        ok: 'Pieces block a rook in every dimension, not only on the board.',
+      },
+      {
+        type: 'play', at: [RB_FIND], goal: goals.to('(0T1)a3', 'That doesn’t capture. Find the knight that differs from your rook in one dimension only.'),
         say: 'Only one knight is within your rook’s reach. Capture it.',
         solution: '(0T3)a3(0T1)a3',
-        ok: 'That knight differed from your rook in one coordinate only: the turn.',
+        ok: 'That knight differed from your rook in one dimension only: the turn.',
       },
       {
-        type: 'play',
-        at: [small('4k/5/2B2/5/K4:0:1:w', '4k/5/2B2/5/1K3:0:1:b', '4k/5/2Bn1/5/1K3:0:2:w', '4k/5/2Bn1/5/K4:0:2:b', '4k/5/2B2/5/K3n:0:3:w')],
-        say: 'A **bishop** changes exactly two coordinates by the same amount. Capture: one file right, one turn back.',
-        mark: { arrows: ['(0T3)c3>(0T2)d3'] },
-        solution: '(0T3)c3(0T2)d3',
-        wrong: 'The knight is one file to the right, one turn back.',
-        ok: 'File and turn, one step each: a bishop move through time.',
-      },
-      {
-        type: 'play',
-        at: [small('4k/5/2B2/5/K4:0:1:w', '4k/5/2B2/5/1K3:0:1:b', '4k/5/2B2/5/1K3:0:2:w', '4k/5/2B2/5/K4:0:2:b', '4k/5/2B2/5/K4:0:3:w',
-          '4k/5/2n2/5/K4:1:2:w', '4k/5/2n2/5/1K3:1:2:b', '4k/5/5/5/1K3:1:3:w', '3k1/5/5/5/1K3:1:3:b')],
-        say: 'Same square, one turn back and one timeline down: that’s two coordinates too. Capture the knight.',
-        solution: '(0T3)c3(1T2)c3',
-        wrong: 'The knight is on c3, on L1, one turn back.',
-        ok: 'Turn and timeline together. The capture branched a new timeline, L2: faded, since you were already one ahead.',
-      },
-      {
-        type: 'choose', inactive: true, say: 'A bishop goes one turn back. What else must it do?',
-        options: ['Nothing else', 'One step in exactly one other direction', 'Any distance, anywhere'], answer: 1,
-        ok: 'Two coordinates, same amount: one turn back means one step in file, rank or timeline.',
+        type: 'choose', say: 'Which of these is a rook move?',
+        options: ['Same square, three turns back', 'One file right and one turn back', 'One timeline down and two squares up'], answer: 0,
+        ok: 'One dimension at a time. The other two change two dimensions: not rook moves.',
       },
     ],
   },
   {
-    id: 'queenkingknight', title: 'Queen, king and knight', blurb: 'More directions at once, and jumps.',
+    id: 'bishop', title: 'The bishop', blurb: 'Two dimensions, the same distance in each.', piece: 'bishop', category: 'pieces',
     recap: [
-      'A queen changes any number of coordinates, all by the same amount.',
-      'A king steps once, in any coordinates at once.',
-      'A knight moves two in one direction and one in another, any two of the four. It jumps over everything, even the void.',
+      'A bishop moves along exactly two dimensions at once, the same distance in each.',
+      'Any two: file and rank (as in chess), file and turn, turn and timeline, rank and timeline...',
+      'It can go as far as it likes, as long as nothing blocks it.',
     ],
     steps: [
       {
-        type: 'play',
-        at: [small('4k/5/5/2Q2/K4:0:1:w', '4k/5/5/2Q2/1K3:0:1:b', '4k/5/3n1/2Q2/1K3:0:2:w', '4k/5/3n1/2Q2/K4:0:2:b', '4k/5/5/2Q2/K3n:0:3:w')],
-        say: 'A **queen** changes any number of coordinates, all by the same amount. Capture: one up, one right, one turn back.',
-        mark: { arrows: ['(0T3)c2>(0T2)d3'] },
-        solution: '(0T3)c2(0T2)d3',
-        wrong: 'The knight is one rank up, one file right and one turn back: three coordinates at once.',
-        ok: 'Three coordinates in one move. Queens are fearsome in 5D.',
+        type: 'play', at: [B_ONE],
+        say: 'A **bishop** moves along two dimensions at once, the same distance in each. Capture: one file right, one turn back.',
+        mark: { arrows: ['(0T3)c3>(0T2)d3'] },
+        solution: '(0T3)c3(0T2)d3',
+        wrong: 'The knight is one file to the right, one turn back.',
+        ok: 'File and turn, one step each.',
       },
       {
+        type: 'play', at: [B_TWO],
+        say: 'Bishops go further, too. Capture the knight two files right and **two** turns back.',
+        solution: '(0T3)c3(0T1)e3',
+        wrong: 'Two files right, two turns back: the knight on e3 on turn 1.',
+        ok: 'Two and two: the same distance in both dimensions.',
+      },
+      {
+        type: 'play', at: [B_TL],
+        say: 'Same square, one turn back and one timeline down: two dimensions as well. Capture the knight.',
+        solution: '(0T3)c3(1T2)c3',
+        wrong: 'The knight is on c3 of L1, one turn back.',
+        ok: 'Turn and timeline together. The capture branched a timeline, L2: faded, since you were already one ahead.',
+      },
+      {
+        type: 'play', at: [B_RL],
+        say: 'Now rank and timeline: capture the knight two timelines down, two squares up.',
+        solution: '(0T3)c1(2T3)c3',
+        wrong: 'The knight is on c3 of L2: two timelines down, two ranks up.',
+        ok: 'Rank and timeline, two each.',
+      },
+      {
+        type: 'choose', at: [B_TWO], say: 'A bishop goes two turns back. How far must it move in one other dimension?',
+        options: ['One step', 'Exactly two steps', 'Any distance'], answer: 1,
+        ok: 'Always the same distance in both of its dimensions.',
+      },
+    ],
+  },
+  {
+    id: 'queen', title: 'The queen', blurb: 'Any number of dimensions at once.', piece: 'queen', category: 'pieces',
+    recap: [
+      'A queen moves along any number of dimensions at once (one, two, three or all four), the same distance in each.',
+      'One dimension like a rook, two like a bishop, and three or four, which no other standard piece can.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [Q_LINE],
+        say: 'A **queen** moves along any number of dimensions, the same distance in each. One dimension, like a rook: capture on L2.',
+        solution: '(0T3)c1(2T3)c1',
+        wrong: 'Same square and turn, two timelines down.',
+        ok: 'One dimension. Two (like a bishop) works too.',
+      },
+      {
+        type: 'play', at: [Q_THREE],
+        say: 'Three dimensions: capture the knight one rank up, one file right and one turn back.',
+        mark: { arrows: ['(0T3)c2>(0T2)d3'] },
+        solution: '(0T3)c2(0T2)d3',
+        wrong: 'One up, one right, one turn back: the knight on d3 of turn 2.',
+        ok: 'Three dimensions in one move.',
+      },
+      {
+        type: 'play', at: [Q_FOUR],
+        say: 'All **four**: capture the knight one up, one right, one turn back and one timeline down.',
+        solution: '(0T3)c2(1T2)d3',
+        wrong: 'The knight is on d3 of L1, one turn back.',
+        ok: 'Every dimension at once. That’s why queens are so dangerous in 5D.',
+      },
+      {
+        type: 'choose', at: [Q_THREE], say: 'Which of these is **not** a queen move?',
+        options: ['Same square, two turns back', 'One step in all four dimensions', 'Two files right and one turn back'], answer: 2,
+        ok: 'Two and one aren’t the same distance: that’s a knight move.',
+      },
+    ],
+  },
+  {
+    id: 'king', title: 'The king', blurb: 'One step, in any dimensions.', piece: 'king', category: 'pieces',
+    recap: [
+      'A king steps once, along any number of dimensions at once.',
+      'It never steps into check, wherever the attack comes from.',
+      'Castling happens on one board only, as in chess.',
+    ],
+    steps: [
+      {
         type: 'play', at: [small('4k/5/5/5/1K3:0:1:w', '4k/5/5/2n2/5:1:1:w')],
-        say: 'A **king** steps once, in any coordinates at once. Capture the knight: one timeline down, one square up and right.',
+        say: 'A **king** steps once, in any dimensions at once. Capture the knight: one timeline down, one square up and right.',
         mark: { arrows: ['(0T1)b1>(1T1)c2'] },
         solution: '(0T1)b1(1T1)c2',
         wrong: 'Step to c2 on L1: timeline, file and rank, one step each.',
-        ok: 'One step through three coordinates. It also played both boards.',
+        ok: 'One step in three dimensions, and it played both boards.',
       },
       {
-        type: 'play',
-        at: [small('k4/5/5/1Nn2/3K1:0:1:w', 'k4/5/5/1Nn2/2K2:0:1:b', 'k4/5/5/1N1n1/2K2:0:2:w', 'k4/5/5/1N1n1/3K1:0:2:b', 'k4/5/5/1N3/3K1:0:3:w')],
-        say: 'A **knight** moves two in one direction and one in another: any two. Capture: two files right, one turn back.',
+        type: 'choose', at: [K_GUARD],
+        say: 'The black rook on L1 guards d1 across timelines. Can your king step to d1?',
+        mark: { threats: ['(1T1w)d1>(0T1w)d1'] },
+        options: ['Yes', 'No'], answer: 1,
+        ok: 'A king never steps into check, whichever board the attack comes from.',
+      },
+      {
+        type: 'play', say: 'Step your king to a safe square.',
+        goal: goals.any, solution: '(0T1)c1b2',
+        ok: 'Safe. Kings also castle only on one board, as in chess.',
+      },
+    ],
+  },
+  {
+    id: 'knight', title: 'The knight', blurb: 'Two along one dimension, one along another.', piece: 'knight', category: 'pieces',
+    recap: [
+      'A knight moves two steps along one dimension and one step along another: any two of the four.',
+      'It jumps: pieces in between don’t block it, and neither does the void.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [N_PAST],
+        say: 'A **knight** moves two steps along one dimension and one along another. Capture: two files right, one turn back.',
         mark: { arrows: ['(0T3)b2>(0T2)d2'] },
         solution: '(0T3)b2(0T2)d2',
         why: { '(0T3)b2(0T1)c2': 'That works too, but find the one two files right and one turn back.' },
@@ -357,8 +505,7 @@ export const LESSONS = [
         ok: 'Two steps in file, one in time.',
       },
       {
-        type: 'play',
-        at: [small('k4/5/5/1Nn2/3K1:0:1:w', 'k4/5/5/1Nn2/2K2:0:1:b', 'k4/5/5/1N1n1/2K2:0:2:w', 'k4/5/5/1N1n1/3K1:0:2:b', 'k4/5/5/1N3/3K1:0:3:w')],
+        type: 'play', at: [N_PAST],
         say: 'Now the other knight: one file right, **two** turns back.',
         solution: '(0T3)b2(0T1)c2',
         why: { '(0T3)b2(0T2)d2': 'That one is two files right, one turn back. Find the other.' },
@@ -366,9 +513,14 @@ export const LESSONS = [
         ok: 'One step in file, two in time.',
       },
       {
-        type: 'play',
-        at: [small('4k/5/5/5/1NK2:0:1:w', '4k/5/5/5/1N1K1:0:1:b', '3k1/5/5/5/1N1K1:0:2:w', '3k1/5/5/5/1NK2:0:2:b', '4k/5/5/5/1NK2:0:3:w',
-          '4k/5/5/5/2K2:-1:4:w', '4k/5/5/5/2K2:1:4:w', '4k/5/5/5/n2K1:2:2:w', '4k/5/5/5/n2K1:2:2:b', '4k/5/5/5/n2K1:2:3:w')],
+        type: 'play', at: [N_TL],
+        say: 'Time and timeline: capture on the same square, two turns back and one timeline down.',
+        solution: '(0T3)b2(1T1)b2',
+        wrong: 'The knight is on b2 of L1, two turns back.',
+        ok: 'The board looks the same, but two dimensions changed.',
+      },
+      {
+        type: 'play', at: [N_VOID],
         say: 'L1 has no board on turn 3: the void. Knights jump right over it. Capture the knight on L2.',
         mark: { voids: ['(1T3w)'] },
         solution: '(0T3)b1(2T3)a1',
@@ -378,16 +530,24 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'pawns', title: 'Pawns', blurb: 'Forward means up the board, and up the timelines.',
+    id: 'pawn', title: 'The pawn', blurb: 'Forward up the board, and up the timelines.', piece: 'pawn', category: 'pieces',
     recap: [
-      'A pawn moves forward up the board, or forward one timeline (toward the opponent’s timelines).',
-      'It captures diagonally: on the board, or one timeline forward and one turn back or ahead.',
-      'It never moves straight through time, and promotes on the last rank.',
+      'A pawn moves forward: up the board, or one timeline toward the opponent’s (two on its first move, as on the board).',
+      'It captures diagonally: on the board (file and rank), or through time (one timeline forward and one turn back or ahead). Never a mix, like rank and turn.',
+      'It never moves straight through time, and promotes on the last rank. En passant works on a single board only.',
     ],
     steps: [
       {
+        type: 'play', at: [small('4k/5/5/2P*2/K4:0:1:w')],
+        say: 'On the board, pawns move as in chess: two squares on their first move. Push this one to **c4**.',
+        solution: '(0T1)c2c4',
+        why: { '(0T1)c2c3': 'One square works, but try the double step.' },
+        wrong: 'Push the pawn two squares up.',
+        ok: 'As in chess.',
+      },
+      {
         type: 'choose', at: [small('4k/5/5/5/K4:-1:1:w', '4k/5/2P2/5/K4:0:1:w')], predict: true,
-        say: 'Black’s timelines are above, so for a white pawn, which way is forward across timelines?',
+        say: 'Your opponent’s timelines are above, so for a white pawn, which way is forward across timelines?',
         options: ['Up, toward Black’s timelines', 'Down, toward White’s'], answer: 0,
         ok: 'Up: the same way it walks up its own board.',
       },
@@ -400,14 +560,17 @@ export const LESSONS = [
         ok: 'Forward through timelines. And again, one move played both boards.',
       },
       {
-        type: 'play',
-        at: [small('4k/5/2P2/5/K4:0:1:w', '4k/5/2P2/5/1K3:0:1:b', '4k/5/2P2/5/1K3:0:2:w', '4k/5/2P2/5/K4:0:2:b', '4k/5/2P2/5/K4:0:3:w',
-          '4k/5/2n2/5/K4:-1:2:w', '4k/5/2n2/5/1K3:-1:2:b', '4k/5/5/5/1K3:-1:3:w', '3k1/5/5/5/1K3:-1:3:b')],
-        say: 'Pawns capture **diagonally**: on the board, or one timeline forward and one turn back. Capture the knight.',
+        type: 'play', at: [P_CAPTURE],
+        say: 'Pawns capture **diagonally**: on the board (file and rank), or through time (timeline and turn). Capture the knight.',
         mark: { arrows: ['(0T3)c3>(-1T2)c3'] },
         solution: '(0T3)c3(-1T2)c3',
         wrong: 'The knight is one timeline up and one turn back.',
         ok: 'A diagonal capture through time and timeline.',
+      },
+      {
+        type: 'choose', at: [P_CAPTURE], say: 'Could a pawn capture one rank up and one turn back?',
+        options: ['Yes', 'No'], answer: 1,
+        ok: 'Only file and rank, or timeline and turn: never a mix of the two pairs.',
       },
       {
         type: 'play', at: [small('5/1P3/4k/5/K4:0:1:w')],
@@ -423,16 +586,18 @@ export const LESSONS = [
       },
     ],
   },
+
+  // ------------------------------------------------------------------ fundamentals
   {
-    id: 'check', title: 'Check across time', blurb: 'Threats come from any board.',
+    id: 'check', title: 'Check across time', blurb: 'Threats come from any board.', category: 'fundamentals',
     recap: [
-      'A king is in check when an enemy piece could capture it next move, from any board.',
-      'Escape as in chess: capture the attacker, move the king, or block.',
+      'A king is in check when an enemy piece could capture it next turn, from any board.',
+      'Escape as in chess: capture the attacker, move the king, or block (a piece in between, even on a board in between).',
       'You can’t end your turn with any king in check.',
     ],
     steps: [
       {
-        type: 'read', at: [small('4k/5/2N2/5/2K2:0:1:w', '4k/5/5/5/B1r2:1:1:w')], check: true,
+        type: 'read', at: [CHECK], check: true,
         say: '**Check!** The black rook on L1 could capture your king on L0, straight across timelines.',
         mark: { threats: ['(1T1w)c1>(0T1w)c1'] },
       },
@@ -443,14 +608,14 @@ export const LESSONS = [
         ok: 'Attacker gone. The jump also played both boards.',
       },
       {
-        type: 'play', at: [small('4k/5/2N2/5/2K2:0:1:w', '4k/5/5/5/B1r2:1:1:w')], check: true,
+        type: 'play', at: [CHECK], check: true,
         goal: ({ moves }) => moves.some((m) => moveLan(m).startsWith('(0T1)c1')) || 'Escape by moving the king this time.',
         say: 'Same check. This time step your **king** out of the rook’s line, play any move on L1, and Submit.',
         solution: '(0T1)c1d2 (1T1)a1b2',
         ok: 'Safe. A king can also escape by capturing across timelines.',
       },
       {
-        type: 'choose', at: [small('4k/5/2N2/5/2K2:0:1:w', '4k/5/5/5/B1r2:1:1:w')], check: true,
+        type: 'choose', at: [CHECK], check: true,
         say: 'Could you ignore the check and just move other pieces?',
         options: ['Yes', 'No'], answer: 1,
         ok: 'Submit stays disabled while any king of yours could be captured.',
@@ -458,11 +623,37 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'mate', title: 'Checkmate', blurb: 'Leave no escape, in space or in time.',
+    id: 'timecheck', title: 'Checks through time', blurb: 'Your king’s past self can be attacked too.', category: 'fundamentals',
+    recap: [
+      'A king on an older board can be captured too: a piece travelling back in time gives a check.',
+      'That king is in the past: it can’t move, and nothing can be put on a past board to block.',
+      'So checks through time are strong: usually only capturing the attacker helps.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [small('4k/r4/5/5/R3K:0:1:w'), TIME_CHECK], check: true,
+        say: 'Your king on d2 looks safe. But the rook can slide back in time and capture it **where it stood on turn 1**.',
+        mark: { threats: ['(0T3w)e1>(0T1w)e1'] },
+      },
+      {
+        type: 'choose', check: true, predict: true,
+        say: 'How can you answer a check on your king’s past self?',
+        options: ['Move that king away', 'Block the rook’s path', 'Capture the rook'], answer: 2,
+        ok: 'The past is frozen: that king can’t move, and nothing can be put on a past board.',
+      },
+      {
+        type: 'play', check: true, say: 'Capture the rook with your king.',
+        solution: '(0T3)d2e1',
+        wrong: 'Your king on d2 can take the rook on e1.',
+        ok: 'The only legal move. Checks through time leave few answers: that makes them strong.',
+      },
+    ],
+  },
+  {
+    id: 'mate', title: 'Checkmate', blurb: 'Leave no escape, in space or in time.', category: 'fundamentals',
     recap: [
       'Checkmate: in check, with no legal turn at all. You win.',
       'In 5D, kings can escape through time and across timelines; a mate must stop those too.',
-      'Stalemate (no legal turn, not in check) is only a draw.',
     ],
     steps: [
       {
@@ -484,6 +675,101 @@ export const LESSONS = [
         say: 'Mate the king on L0 using a rook from L1. Escapes onto L1 must be covered too.',
         solution: '(1T1)e5(0T1)e5',
         ok: 'Checkmate across timelines! One rook mates on L0 while the other guards L1.',
+      },
+    ],
+  },
+  {
+    id: 'stalemate', title: 'Stalemate or mate?', blurb: 'When no legal turn is a draw, and when it’s a loss.', category: 'fundamentals',
+    recap: [
+      'No legal turn and not in check: stalemate, a draw.',
+      'No legal turn while in check: checkmate. Remember a turn must play every board in the present.',
+      'On this site (the tournament rule), a stalemated side whose kings are all on inactive timelines loses.',
+    ],
+    steps: [
+      {
+        type: 'choose', at: [TRICKY], predict: true,
+        say: 'If Black ends up with no legal turn but is **not** in check, who wins?',
+        options: ['White', 'Nobody: it’s a draw (stalemate)'], answer: 1,
+        ok: 'Stalemate is a draw. But in 5D, “no legal turn” has a twist: let’s see.',
+      },
+      {
+        type: 'play', goal: goals.mate(), submit: 'self',
+        say: 'Mate in one. Black must play **both** timelines, and its only piece on L+0 is a pawn. Use your bishop and a pawn.',
+        solution: '(-1T1)b1e4 (0T1)a1a3',
+        ok: 'The pawn blocks Black’s only piece on L+0, and Be4 attacks the king’s past self. Black can’t answer both: mate!',
+      },
+      {
+        type: 'choose', at: [TRICKY],
+        say: 'A stalemate, but all of Black’s kings are on **inactive** timelines. What is the result on this site?',
+        options: ['A draw', 'Black loses: its kings are exiled'], answer: 1,
+        ok: 'The community tournament rule: exiled kings lose a stalemate. If both or neither side is exiled, it’s a draw.',
+      },
+    ],
+  },
+
+  // ------------------------------------------------------------------ advanced
+  {
+    id: 'fairy', title: 'Fairy pieces', blurb: 'Princess, unicorn and dragon.', piece: 'unicorn', category: 'advanced',
+    recap: [
+      'Princess: moves like a rook or a bishop (one or two dimensions).',
+      'Unicorn: exactly three dimensions at once, the same distance in each.',
+      'Dragon: exactly four dimensions at once. Neither can move on a single board.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [FAIRY_PRINCESS],
+        say: 'Some variants add fairy pieces. A **princess** moves like a rook or a bishop. Capture the knight, one file right and one turn back.',
+        solution: '(0T3)c3(0T2)d3',
+        wrong: 'One file right, one turn back: a bishop-like move.',
+        ok: 'Rook or bishop moves: a queen without its three- and four-dimension moves.',
+      },
+      {
+        type: 'play', at: [FAIRY_UNICORN],
+        say: 'A **unicorn** moves along exactly three dimensions. Capture: one up, one right, one turn back.',
+        solution: '(0T3)c2(0T2)d3',
+        wrong: 'One rank up, one file right, one turn back.',
+        ok: 'Three dimensions, never fewer.',
+      },
+      {
+        type: 'play', at: [FAIRY_DRAGON],
+        say: 'A **dragon** moves along all four dimensions at once. Capture the knight on L1.',
+        solution: '(0T3)c2(1T2)d3',
+        wrong: 'One up, one right, one turn back, one timeline down.',
+        ok: 'All four, every time.',
+      },
+      {
+        type: 'choose', at: [FAIRY_UNICORN], say: 'Can a unicorn or a dragon move on just its own board?',
+        options: ['Yes', 'No'], answer: 1,
+        ok: 'A move on one board changes only file and rank: two dimensions. Both need more.',
+      },
+    ],
+  },
+  {
+    id: 'fairy2', title: 'Royals and brawns', blurb: 'Royal queen, common king and brawn.', piece: 'royalqueen', category: 'advanced',
+    recap: [
+      'Royal queen: moves like a queen, but is royal: it can be checked and mated like a king.',
+      'Common king: moves like a king, but is not royal: it can be captured like any piece.',
+      'Brawn: a pawn that also captures one step forward plus one step in another dimension.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [FAIRY_ROYAL], check: true, goal: goals.any,
+        say: 'A **royal queen** moves like a queen but counts as a king. The rook attacks it: get it to safety.',
+        solution: '(0T1)c3d4',
+        ok: 'Royal pieces must never be left where they can be captured.',
+      },
+      {
+        type: 'choose', at: [FAIRY_COMMON],
+        say: 'A **common king** moves like a king but isn’t royal. The rook attacks it. Are you in check?',
+        options: ['Yes', 'No'], answer: 1,
+        ok: 'Not royal: losing it is like losing any other piece.',
+      },
+      {
+        type: 'play', at: [FAIRY_BRAWN],
+        say: 'A **brawn** is a pawn with more captures. Capture the knight: one timeline up and one file right.',
+        solution: '(0T1)c3(-1T1)d3',
+        wrong: 'One timeline up, one file right.',
+        ok: 'A pawn couldn’t: it captures across timelines only with a turn step.',
       },
     ],
   },

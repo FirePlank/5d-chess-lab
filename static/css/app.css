@@ -1237,7 +1237,14 @@ html[data-home-prompt="dismissed"] .new-prompt { display: none; }
 /* ------------------------------------------------------------ tutorial */
 /* The lesson list (over the board, as checkmate practice's), then a lesson: its steps as dots,
    the coach's message, answers, feedback, and the lesson's end with its stars and recap. */
-.tut-lessons { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.tut-lessons { display: flex; flex-direction: column; gap: 28px; }
+.tut-categ-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.tut-categ-head h2 { margin: 0; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--strong); }
+.tut-categ-head .muted { font-size: 13px; }
+.tut-categ-blurb { margin: 4px 0 12px; font-size: 13px; }
+.tut-categ-lessons { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.tut-lesson-piece { flex: none; width: 38px; height: 38px; }
+.tut-lesson.done .tut-lesson-piece { filter: drop-shadow(0 0 3px var(--good)); }
 .tut-lesson {
   display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 10px; text-align: left;
   background: var(--panel); border: 1px solid var(--border); color: var(--text); cursor: pointer;
