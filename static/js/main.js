@@ -13,6 +13,8 @@ import { Games } from './games.js';
 import { Editor } from './editor.js';
 import { Practice } from './practice.js';
 import { Tutorial } from './tutorial.js';
+import { initAccount } from './account.js';
+import { PlayerPage } from './player.js';
 import { Home } from './home.js';
 import { OnlineGame } from './online.js';
 import { Puzzles, PuzzleThemes } from './puzzles.js';
@@ -195,8 +197,11 @@ async function main() {
     history.replaceState(null, '', '#/analysis');
   });
 
+  // The account first: back from a sign-in, it puts the address back (at once) before the
+  // first route; the profile arrives when the server answers.
+  initAccount().catch((e) => console.warn('account:', e));
   app.server = await serverInfo();
-  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), tutorial: new Tutorial(app), home: new Home(app), game: new OnlineGame(app), puzzles: new Puzzles(app), puzzlethemes: new PuzzleThemes(app), rules: rulesPage() };
+  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), tutorial: new Tutorial(app), player: new PlayerPage(app), home: new Home(app), game: new OnlineGame(app), puzzles: new Puzzles(app), puzzlethemes: new PuzzleThemes(app), rules: rulesPage() };
   try {
     await app.pages.analysis.init();
     setRules(app.pages.analysis.rules);

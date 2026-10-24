@@ -12,6 +12,7 @@ import { preview } from './openings.js';
 import { lanText } from './input.js';
 import { sb, rpc, edge, pid, tab, live, setPresence, serverNow, syncClock, onConnection, onPing, intent, isOutstanding, report } from './net.js';
 import { tcLabel, tcText, speed, clockText } from './tc.js';
+import { ratingText, profileHref, refreshAccount } from './account.js';
 import { $, el, toast, onWindow } from './util.js';
 
 /** An action block that appears ignores clicks this long (one meant for the block it replaced). */
@@ -174,7 +175,9 @@ export class OnlineGame {
     $('#challenge-title').textContent = st.owner ? 'Challenge a friend' : 'Open challenge';
     const side = s.color ? (st.owner ? (s.color === 1 ? 'You play White' : 'You play Black') : (s.color === 1 ? 'You play Black' : 'You play White')) : 'Sides drawn at random';
     $('#challenge-props').replaceChildren(
-      el('span', { text: s.variant }), ' · ', el('span', { title: tcText(tc), text: `${speed(tc)} ${tcLabel(tc)}` }), ' · ', el('span', { text: side }));
+      el('span', { text: s.variant }), ' · ', el('span', { title: tcText(tc), text: `${speed(tc)} ${tcLabel(tc)}` }), ' · ',
+      el('span', { text: s.rated ? 'Rated' : 'Casual' }), ' · ', el('span', { text: side }),
+      !st.owner && s.owner_name ? el('span', { text: ` · from ${s.owner_name}${s.owner_rating != null ? ` (${ratingText(s.owner_rating, s.owner_provisional)})` : ''}` }) : null);
     try {
       this.rules.call({ cmd: 'new', position: s.position });
       $('#challenge-preview').replaceChildren(preview(this.rules.call({ cmd: 'view', node: 0, draft: [] }).view));
@@ -347,7 +350,8 @@ export class OnlineGame {
   /** The held live row, ended as the finished game's record says (and its last actions played). */
   endWith(game) {
     const lans = game.moves.map((m) => m.lan);
-    this.row = { ...this.row, result: game.result, termination: game.termination, color_ticking: null, draw_offer: null, white_claim_at: null, black_claim_at: null, moves: game.moves, ply: lans.length };
+    this.row = { ...this.row, result: game.result, termination: game.termination, color_ticking: null, draw_offer: null, white_claim_at: null, black_claim_at: null, moves: game.moves, ply: lans.length,
+      white_diff: game.white_diff, black_diff: game.black_diff };
     this.applyRow(this.row, { resync: true });
     this.revealAt = performance.now();
     if (this.active) sounds.end(game.result, this.role === 1 ? 'w' : this.role === 2 ? 'b' : null);
@@ -435,6 +439,8 @@ export class OnlineGame {
     // Events.
     if (!initial && prev) {
       if (row.result && !prev.result && this.active) sounds.end(row.result, this.role === 1 ? 'w' : this.role === 2 ? 'b' : null);
+      // A rated game of ours ended: the header shows the new rating.
+      if (row.result && !prev.result && row.rated && this.role) refreshAccount();
       const opp = this.role ? 3 - this.role : null;
       if (opp && row.draw_offer === opp && prev.draw_offer !== opp) {
         this.revealAt = performance.now();
@@ -769,8 +775,20 @@ export class OnlineGame {
     const r = this.row || this.finished;
     if (!r) return '';
     if (this.row && r.engine_color === side) return `Kairos${r.engine_level < 8 ? ` · Level ${r.engine_level}` : ''}`;
-    if (!this.row) return side === this.role ? 'You' : side === 1 ? r.white_name : r.black_name;
-    return side === this.role ? 'You' : 'Anonymous';
+    const named = side === 1 ? r.white_name : r.black_name;
+    if (!this.row) return named || (side === this.role ? 'You' : 'Anonymous');
+    return named || (side === this.role ? 'You' : 'Anonymous');
+  }
+
+  /** A side's rating going into a rated game, and its change once it ended: "1500? +12". */
+  ratingOf(side) {
+    const r = this.row || this.finished;
+    if (!r || !r.rated) return '';
+    const rating = side === 1 ? r.white_rating : r.black_rating;
+    const rd = side === 1 ? r.white_rd : r.black_rd;
+    const diff = side === 1 ? r.white_diff : r.black_diff;
+    if (rating == null) return '';
+    return ratingText(Math.trunc(rating), rd >= 110) + (diff == null ? '' : ` ${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}`);
   }
 
   render() {
@@ -779,7 +797,15 @@ export class OnlineGame {
     const f = !r ? this.finished : null;
     if (!r && !f) return;
     for (const [pos, side] of this.bars()) {
-      $(`#og-${pos}-name`).textContent = this.name(side) || (f ? (side === 1 ? f.white_name : f.black_name) : '');
+      const nameEl = $(`#og-${pos}-name`);
+      nameEl.textContent = this.name(side) || (f ? (side === 1 ? f.white_name : f.black_name) : '');
+      const user = (r || f) && (side === 1 ? (r || f).white_user : (r || f).black_user);
+      if (user) nameEl.href = profileHref(user); else nameEl.removeAttribute('href');
+      const diff = (r || f) && (side === 1 ? (r || f).white_diff : (r || f).black_diff);
+      const ratingEl = $(`#og-${pos}-rating`);
+      ratingEl.textContent = this.ratingOf(side);
+      ratingEl.classList.toggle('up', diff > 0);
+      ratingEl.classList.toggle('down', diff < 0);
       $(`#og-${pos}-dot`).className = `side-dot ${side === 1 ? 'white' : 'black'}`;
       $(`#og-${pos}`).classList.toggle('tempo', !!(r && this.live() && r.to_move === side));
       if (!r || r.base_ms == null) {
@@ -892,7 +918,8 @@ export class OnlineGame {
     const mins = Math.round((Date.now() - Date.parse(g.created_at)) / 60000);
     const ago = mins < 1 ? 'just now' : mins < 60 ? `${mins} minute${mins === 1 ? '' : 's'} ago` : `${Math.round(mins / 60)} h ago`;
     $('#og-meta').replaceChildren(
-      el('div', { class: 'og-meta-line' }, el('b', { text: g.variant }), ` · ${speed(tc)} ${tcLabel(tc)}`, g.private ? ' · Private' : '', (this.row && this.row.engine_color) ? ' · Against Kairos' : ''),
+      el('div', { class: 'og-meta-line' }, el('b', { text: g.variant }), ` · ${speed(tc)} ${tcLabel(tc)}`,
+        (this.row && this.row.engine_color) ? ' · Against Kairos' : g.rated ? ' · Rated' : ' · Casual', g.private ? ' · Private' : ''),
       el('div', { class: 'og-meta-line muted', title: tcText(tc), text: `Started ${ago}` }));
     $('#og-watchers').classList.toggle('hidden', !this.spectators);
     $('#og-watchers-n').textContent = this.spectators;

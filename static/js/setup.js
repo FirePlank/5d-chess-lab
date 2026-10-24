@@ -1,14 +1,19 @@
 // The "Game options" dialog behind the home page's three buttons (after infinitechess.org's):
 // variant, time (timed with minutes, increment and the 5D per-timeline delay, or unlimited), side,
-// and against Kairos its strength and opening book. The last choices are remembered. Submitting
+// rated or casual against people (rated needs an account, a clock and a rated variant), and
+// against Kairos its strength and opening book. The last choices are remembered. Submitting
 // creates a lobby seek, a private challenge (and opens its page), or a game against Kairos.
 import { VariantPicker } from './variant-picker.js';
 import { edge, report } from './net.js';
 import { MINUTES, INCREMENTS, TL_DELAYS, PRESETS, tcLabel } from './tc.js';
+import { account } from './account.js';
 import { $, $$, el, store, toast } from './util.js';
 
+/** The variants rated games are played in (the server's private.rated_variant). */
+export const RATED_VARIANTS = ['Standard', 'Standard - Turn Zero'];
+
 const SUBMIT = { online: 'Create online game', friend: 'Challenge a friend', computer: 'Play against computer' };
-const DEFAULTS = { variant: 'Standard - Turn Zero', timed: true, minutes: 5, inc: 0, tl: 3, side: 'r', level: 4, book: true };
+const DEFAULTS = { variant: 'Standard - Turn Zero', timed: true, minutes: 5, inc: 0, tl: 3, side: 'r', level: 4, book: true, rated: true };
 
 export class GameSetup {
   constructor(app, variants) {
@@ -22,7 +27,7 @@ export class GameSetup {
     this.picker = new VariantPicker($('#setup-variant'), {
       variants,
       value: variants.some((v) => v.name === this.o.variant) ? this.o.variant : DEFAULTS.variant,
-      onChange: (name) => { if (name !== '__custom') { this.o.variant = name; this.save(); } },
+      onChange: (name) => { if (name !== '__custom') { this.o.variant = name; this.save(); } else this.render(); },
     });
     $$('#setup-timed button').forEach((b) => (b.onclick = () => { this.o.timed = b.dataset.v === 'timed'; this.save(); }));
     const slider = (id, list, key) => {
@@ -47,6 +52,8 @@ export class GameSetup {
         el('span', { text: level }));
     }));
     $('#setup-book').onchange = () => { this.o.book = $('#setup-book').checked; this.save(); };
+    $('#setup-rated').onchange = () => { this.o.rated = $('#setup-rated').checked; this.save(); };
+    account.onChange(() => { if (this.dialog.open) this.render(); });
     $('#setup-close').onclick = () => this.dialog.close();
     $('#setup-form').onsubmit = (e) => { e.preventDefault(); this.submit(); };
   }
@@ -81,6 +88,11 @@ export class GameSetup {
     $('#setup-book').checked = this.o.book !== false;
     const computer = this.mode === 'computer';
     $$('.setup-computer').forEach((n) => n.classList.toggle('hidden', !computer));
+    $$('.setup-human').forEach((n) => n.classList.toggle('hidden', computer));
+    const why = this.unratedReason();
+    $('#setup-rated').disabled = !!why;
+    $('#setup-rated').checked = !why && this.o.rated !== false;
+    $('#setup-rated-note').textContent = why || '';
     $('#setup-submit').textContent = SUBMIT[this.mode] || SUBMIT.online;
     $('#setup-submit').title = timed ? tcLabel(this.timeControl()) : 'Unlimited time';
   }
@@ -99,6 +111,17 @@ export class GameSetup {
     if (!this.dialog.open) this.dialog.showModal();
   }
 
+  /** Why this game can't be rated (no account, no clock, another variant), or null. */
+  unratedReason() {
+    if (!account.profile) return 'Sign in to play rated';
+    if (!this.o.timed) return 'Rated games need a clock';
+    if (!RATED_VARIANTS.includes(this.variant())) return 'Rated: Standard and Turn Zero';
+    return null;
+  }
+
+  /** Whether the game will be rated. */
+  rated() { return this.mode !== 'computer' && !this.unratedReason() && this.o.rated !== false; }
+
   variant() {
     const v = this.picker.value;
     return v === '__custom' ? this.custom : v || DEFAULTS.variant;
@@ -116,7 +139,7 @@ export class GameSetup {
         const build = this.app.build && this.app.build.engine ? this.app.build.engine.sha.slice(0, 7) : 'local';
         r = await edge('create_engine_game', { ...body, level: this.o.level, book: this.o.book !== false, version: build });
       } else {
-        r = await edge('create_seek', { ...body, private: this.mode === 'friend' });
+        r = await edge('create_seek', { ...body, private: this.mode === 'friend', rated: this.rated() });
       }
       this.dialog.close();
       if (this.onCreated) this.onCreated(this.mode, r);

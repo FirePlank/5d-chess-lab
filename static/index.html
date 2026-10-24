@@ -54,6 +54,7 @@
     </div>
   </nav>
   <div class="site-actions">
+    <button class="acct-btn" id="btn-account" type="button"><span>Sign in</span></button>
     <button class="icon-btn" id="btn-sound" title="Mute sounds" aria-label="Sound effects" aria-pressed="true"><svg><use href="#i-sound"/></svg></button>
     <button class="icon-btn" id="btn-board-theme" title="Board colours" aria-label="Board colours"><svg><use href="#i-palette"/></svg></button>
     <button class="icon-btn" id="btn-settings" title="Settings" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
@@ -106,6 +107,9 @@
         <h2 class="featured-title" id="featured-title">Active games</h2>
         <div class="featured-grid" id="featured-grid"></div>
       </section>
+      <footer class="home-footer">
+        <a href="privacy.html">Privacy</a><span aria-hidden="true">·</span><a href="terms.html">Terms</a><span aria-hidden="true">·</span><a href="https://github.com/FirePlank/5d-chess-lab" target="_blank" rel="noopener">Source</a>
+      </footer>
     </div>
   </section>
 
@@ -355,7 +359,7 @@
       <!-- Board editor -->
       <div class="side-view hidden loading" id="side-game">
         <div class="panel play-live online-live">
-          <div class="player-bar" id="og-top"><span class="side-dot" id="og-top-dot"></span><span class="pname" id="og-top-name"></span><span class="clock-delay" id="og-top-delay"></span><span class="clock" id="og-top-clock"></span></div>
+          <div class="player-bar" id="og-top"><span class="side-dot" id="og-top-dot"></span><a class="pname" id="og-top-name"></a><span class="prating" id="og-top-rating"></span><span class="clock-delay" id="og-top-delay"></span><span class="clock" id="og-top-clock"></span></div>
           <div class="disconnect-status hidden" id="og-opp">
             <p id="og-opp-text"></p>
             <div class="og-claims hidden" id="og-claims"><button class="btn" type="button" id="og-claim-win">Claim victory</button><button class="btn" type="button" id="og-claim-draw">Call a draw</button></div>
@@ -388,7 +392,7 @@
           </div>
           <div class="og-actions hidden" id="og-actions-spectate"><span class="og-spectating"><svg><use href="#i-eye"/></svg>Spectating</span></div>
           <div class="self-disconnect hidden" id="og-self"></div>
-          <div class="player-bar" id="og-bottom"><span class="side-dot" id="og-bottom-dot"></span><span class="pname" id="og-bottom-name"></span><span class="clock-delay" id="og-bottom-delay"></span><span class="clock" id="og-bottom-clock"></span></div>
+          <div class="player-bar" id="og-bottom"><span class="side-dot" id="og-bottom-dot"></span><a class="pname" id="og-bottom-name"></a><span class="prating" id="og-bottom-rating"></span><span class="clock-delay" id="og-bottom-delay"></span><span class="clock" id="og-bottom-clock"></span></div>
         </div>
         <div class="panel og-info" id="og-info">
           <div class="og-meta" id="og-meta"></div>
@@ -649,6 +653,41 @@
       </div>
     </div>
   </section>
+  <!-- ============================== A player's profile (after lichess's): rating, results, games -->
+  <section class="player-page hidden" id="player">
+    <div class="player-inner">
+      <p class="muted hidden" id="pl-missing">No such player.</p>
+      <div id="pl-main" class="hidden">
+        <header class="panel pl-head">
+          <div class="pl-who">
+            <h1 id="pl-name"></h1>
+            <span class="muted" id="pl-since"></span>
+          </div>
+          <div class="pl-rating"><span class="pl-rating-v" id="pl-rating"></span><span class="muted" id="pl-rd"></span></div>
+        </header>
+        <div class="pl-stats" id="pl-stats"></div>
+        <section class="panel pl-chart-box hidden" id="pl-chart-box">
+          <h2 class="panel-title">Rating</h2>
+          <div id="pl-chart"></div>
+        </section>
+        <section class="panel pl-games">
+          <div class="seg pl-tabs" id="pl-tabs" role="tablist">
+            <button type="button" data-kind="people" class="on" role="tab">Games</button>
+            <button type="button" data-kind="kairos" role="tab">Against Kairos</button>
+          </div>
+          <div class="pl-levels hidden" id="pl-levels"></div>
+          <div class="table-wrap">
+            <table class="games pl-table">
+              <thead><tr><th>Date</th><th>Opponent</th><th class="center">Result</th><th>Rating</th><th>Ending</th><th class="num">Actions</th><th>Variant</th><th>Time control</th></tr></thead>
+              <tbody id="pl-body"></tbody>
+            </table>
+          </div>
+          <p class="muted pl-empty hidden" id="pl-empty">No games yet.</p>
+          <button type="button" class="btn sm hidden" id="pl-more">More games</button>
+        </section>
+      </div>
+    </div>
+  </section>
   <!-- ============================== Rules the engine plays by -->
   <section class="rules hidden" id="rules">
     <article class="rules-doc">
@@ -796,6 +835,11 @@
         <button type="button" data-v="b" title="Black"><img src="pieces/king-black.svg" alt="Black"></button>
       </div>
     </div>
+    <div class="field book-row setup-human" id="setup-rated-row">
+      <label class="switch"><input type="checkbox" id="setup-rated" aria-label="Rated"><span></span></label>
+      <span>Rated</span>
+      <span class="muted setup-rated-note" id="setup-rated-note"></span>
+    </div>
     <fieldset class="field skill-field setup-computer"><legend>Strength</legend><div class="skill-pick" id="setup-level"></div></fieldset>
     <div class="field book-row setup-computer" title="Play known opening theory when available">
       <label class="switch"><input type="checkbox" id="setup-book" checked aria-label="Opening book"><span></span></label>
@@ -806,6 +850,31 @@
       <button class="btn" type="button" id="setup-close">Cancel</button>
       <button class="btn primary" type="submit" id="setup-submit">Create online game</button>
     </div>
+  </form>
+</dialog>
+
+<dialog class="modal acct-dialog" id="dlg-account">
+  <form method="dialog" class="modal-body">
+    <div id="acct-out">
+      <h2>Sign in</h2>
+      <p class="muted">An account keeps your rating and your games, and lets you play rated games. Your 5D rating from the community list carries over when you sign in with the same Discord account.</p>
+      <div class="acct-providers">
+        <button type="button" class="btn block acct-provider discord" id="acct-discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.6 1.3a18 18 0 0 0-5.6 0L8.6 3a19.5 19.5 0 0 0-4.9 1.5C.6 9.1-.3 13.7.1 18.2a19.7 19.7 0 0 0 6 3l1.3-2.1a12.7 12.7 0 0 1-2-1l.5-.4a14 14 0 0 0 12.1 0l.5.4c-.6.4-1.3.7-2 1l1.3 2.1a19.6 19.6 0 0 0 6-3c.5-5.2-.8-9.7-3.5-13.8ZM8 15.4c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>Continue with Discord</button>
+        <button type="button" class="btn block acct-provider google" id="acct-google"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.2 3.5-8.8Z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3a7.2 7.2 0 0 1-10.7-3.8h-4v3.1A12 12 0 0 0 12 24Z"/><path fill="#FBBC05" d="M5.4 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8l4-3.1Z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.4 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8Z"/></svg>Continue with Google</button>
+      </div>
+      <p class="muted acct-small">Playing as a guest still works: casual games, puzzles and everything else.</p>
+      <p class="muted acct-small">By signing in you agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+    </div>
+    <div id="acct-in" class="hidden">
+      <h2 id="acct-in-name"></h2>
+      <p class="acct-in-rating"><span class="muted">Rating</span> <strong id="acct-in-rating"></strong></p>
+      <p class="muted" id="acct-in-games"></p>
+      <div class="acct-actions">
+        <a class="btn" id="acct-profile" href="#/">Your profile</a>
+        <button type="button" class="btn" id="acct-signout">Sign out</button>
+      </div>
+    </div>
+    <div class="modal-actions"><button class="btn" value="cancel">Close</button></div>
   </form>
 </dialog>
 

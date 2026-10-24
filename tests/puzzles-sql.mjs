@@ -19,10 +19,7 @@ try {
 }
 
 const db = new PGlite({ extensions: { pgcrypto } });
-await db.exec(`
-  create schema extensions;
-  create role anon; create role authenticated; create role service_role;
-`);
+await db.exec(readFileSync(new URL('supabase-stub.sql', here), 'utf8'));
 const dir = new URL('../supabase/migrations/', here);
 for (const f of readdirSync(dir).sort()) await db.exec(readFileSync(new URL(f, dir), 'utf8'));
 

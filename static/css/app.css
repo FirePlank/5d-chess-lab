@@ -1308,3 +1308,82 @@ html[data-home-prompt="dismissed"] .new-prompt { display: none; }
 .tut-key { padding: var(--s2) var(--s3); font-size: 13px; }
 .tut-key summary { cursor: pointer; font-weight: 600; color: var(--strong); }
 .tut-key ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; line-height: 1.4; }
+
+/* ------------------------------------------------------------ accounts and profiles */
+/* The header's account button (Sign in, or the name and rating), its dialog, ratings beside
+   names (lobby, featured games, game page), and a player's profile page (after lichess's). */
+.acct-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; margin-right: 6px; padding: 0 12px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--inset); color: var(--strong); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.acct-btn:hover { border-color: var(--accent); }
+.acct-btn.signed-in { background: none; }
+.acct-btn .acct-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-btn .acct-rating { color: var(--muted); font-weight: 500; }
+.acct-dialog .modal-body { max-width: 420px; }
+.acct-dialog h2 { margin-top: 0; }
+.acct-providers { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.acct-provider { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 44px; font-weight: 600; }
+.acct-provider svg { width: 20px; height: 20px; }
+.acct-provider.discord { background: #5865f2; border-color: #5865f2; color: #fff; }
+.acct-provider.discord:hover { background: #4752c4; }
+.acct-small { font-size: 12.5px; }
+.acct-in-rating strong { font-size: 18px; color: var(--strong); }
+.acct-actions { display: flex; gap: 8px; margin-top: 12px; }
+.setup-rated-note { margin-left: auto; font-size: 12.5px; }
+.seek-rating, .fg-rating { margin-left: 6px; color: var(--muted); font-weight: 500; }
+.seek-rated { margin-left: 8px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--strong); }
+a.pname { color: var(--strong); text-decoration: none; }
+a.pname[href]:hover { text-decoration: underline; }
+.prating { margin-left: 8px; margin-right: auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.prating.up { color: var(--good); }
+.prating.down { color: var(--bad); }
+
+.player-page { height: 100%; overflow-y: auto; }
+.player-inner { max-width: 960px; margin: 0 auto; padding: 28px 20px 48px; }
+#pl-main { display: flex; flex-direction: column; gap: 16px; }
+.pl-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 22px; }
+.pl-who h1 { margin: 0 0 4px; font-size: 26px; color: var(--strong); overflow-wrap: anywhere; }
+.pl-who .muted { font-size: 13px; }
+.pl-rating { display: flex; flex-direction: column; align-items: flex-end; }
+.pl-rating-v { font-size: 34px; font-weight: 800; color: var(--strong); line-height: 1.1; }
+.pl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.pl-stat { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; }
+.pl-stat-k { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.pl-stat-v { font-size: 24px; font-weight: 700; color: var(--strong); }
+.pl-peak { font-size: 12.5px; }
+.pl-wdl { display: flex; flex-direction: column; gap: 4px; }
+.pl-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--inset); }
+.pl-bar-win { background: var(--good); }
+.pl-bar-draw { background: var(--muted); }
+.pl-bar-loss { background: var(--bad); }
+.pl-counts { display: flex; gap: 10px; font-size: 12.5px; }
+.pl-counts .win, .pl-res.win, .pl-diff.up { color: var(--good); }
+.pl-counts .loss, .pl-res.loss, .pl-diff.down { color: var(--bad); }
+.pl-counts .draw, .pl-res.draw, .pl-res.aborted { color: var(--muted); }
+.pl-chart-box, .pl-games { padding: 14px 16px; }
+.pl-svg { width: 100%; height: auto; display: block; }
+.pl-grid { stroke: var(--border); stroke-width: 1; }
+.pl-axis { fill: var(--muted); font-size: 11px; }
+.pl-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.pl-dot { fill: var(--accent); }
+.pl-tabs { margin-bottom: 12px; }
+.pl-levels { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.pl-level { display: flex; flex-direction: column; gap: 4px; min-width: 140px; padding: 8px 10px; border-radius: var(--r); background: var(--inset); font-size: 13px; }
+.pl-table tbody tr { cursor: pointer; }
+.pl-table tbody tr:hover { background: var(--hover); }
+.pl-opp { white-space: nowrap; }
+.pl-opp .side-dot { margin-right: 6px; vertical-align: -1px; }
+.pl-res { font-weight: 600; }
+.pl-empty { margin: 8px 0 0; }
+#pl-more { margin-top: 10px; }
+@media (max-width: 652px) {
+  .acct-btn .acct-name { max-width: 80px; }
+  .pl-head { flex-direction: column; align-items: flex-start; }
+  .pl-rating { align-items: flex-start; }
+}
+
+.home-footer { position: relative; display: flex; justify-content: center; gap: 10px; margin-top: 28px; font-size: 13px; color: var(--muted); }
+.home-footer a { color: var(--muted); }
+.home-footer a:hover { color: var(--strong); }

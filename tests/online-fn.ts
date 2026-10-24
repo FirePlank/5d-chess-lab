@@ -13,7 +13,7 @@ const { handle, timeControl } = await import('../supabase/functions/game/index.t
 const assert = (ok: unknown, what: string) => { if (!ok) throw new Error('failed: ' + what); };
 
 const db = new PGlite({ extensions: { pgcrypto } });
-await db.exec(`create schema extensions; create role anon; create role authenticated; create role service_role;`);
+await db.exec(Deno.readTextFileSync(new URL('./supabase-stub.sql', import.meta.url)));
 for (const f of [...Deno.readDirSync(new URL('../supabase/migrations/', import.meta.url))].map((e) => e.name).sort()) {
   await db.exec(Deno.readTextFileSync(new URL(`../supabase/migrations/${f}`, import.meta.url)));
 }

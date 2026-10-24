@@ -18,8 +18,17 @@ an unofficial fan project, not affiliated with Thunkspace.
   resign and draw offers with a second click to confirm, a claim window when the opponent leaves
   (10 s if they closed the page, 60 s if they lost connection), rematch, chat in private games,
   spectators, and every finished game recorded (5dpgn with clocks). Against Kairos the engine
-  runs in your browser and its clock waits while you are away. Players are anonymous: a random
-  token in your browser is your identity.
+  runs in your browser and its clock waits while you are away. Guests play as anonymous: a random
+  token in your browser is their identity.
+- **Accounts and rated games**: sign in with Discord or Google to play rated games (both players
+  signed in, timed, Standard or Standard - Turn Zero) and keep a rating: Glicko-2 as lichess runs
+  it (from 1500 ± 500, provisional while the deviation is 110 or more, the deviation growing back
+  while you are away, at most 700 points a game). A Discord account found in the 5D community's
+  rating list starts from that rating. Ratings show in the lobby, on the game page (with each
+  game's change) and in the records (WhiteElo / BlackElo).
+- **Profiles** (`#/player/<id>`, after lichess's): rating ± deviation, the peak, results rated,
+  against people and against Kairos (by level), the rating after each rated game as a chart, and
+  the games, newest first, against people and against Kairos on separate tabs.
 - **Tutorial** (Learn, `#/tutorial`; the home page offers it to first-time visitors, after
   infinitechess.org's "New?" prompt): short lessons that teach 5D chess by doing, in sections
   after lichess.org/learn. The multiverse (boards in time, travel and new timelines, the present,
@@ -106,6 +115,7 @@ node tests/openings.mjs                     # named openings, variations and sav
 node tests/records.mjs games/sprt/*.jsonl   # replay records: actions, book and eval tags, results
 node tests/pgn_corpus.mjs <dir>             # load every 5dpgn file under a directory
 node tests/online-sql.mjs                   # the online-play database in PGlite (npm i --prefix .tools @electric-sql/pglite)
+node tests/accounts-sql.mjs                 # accounts, the rating import, rated games and profiles in PGlite
 deno run -A tests/online-fn.ts              # the game edge function with the rules core (after cargo wasm-server)
 ```
 
@@ -117,6 +127,28 @@ calls (anonymous players pass their token; the database stores only its SHA-256)
 runs the timers every 10 s. `supabase/functions/game/` is the edge function that checks new
 games and every action with the Kairos rules core (it fetches the published `kairos-server.wasm`)
 before the database applies it. The Supabase GitHub integration deploys both on a push to `main`.
+
+### Accounts (Supabase Auth)
+
+Signing in links the browser's player token to the account (`account_link`), so every call keeps
+working by player id. Two providers need setting up once, in the Supabase dashboard
+(Authentication → Sign In / Providers), with this callback URL at both providers:
+`https://iazwinlpwqcdamnybzll.supabase.co/auth/v1/callback`.
+
+- **Discord**: discord.com/developers → New Application → OAuth2: add the callback URL as a
+  redirect, copy the Client ID and Client Secret into Supabase's Discord provider.
+- **Google**: console.cloud.google.com → APIs & Services → Credentials → Create OAuth client ID
+  (Web application; consent screen first): the callback URL under "Authorized redirect URIs",
+  then the Client ID and Client Secret into Supabase's Google provider.
+- **URL configuration** (Authentication → URL Configuration): Site URL
+  `https://fireplank.github.io/5d-chess-lab/`, and that URL in Redirect URLs (plus
+  `http://localhost:8091/` to sign in from a local server).
+
+The community ratings: `python scripts/import_ratings.py ratings.csv > import.sql` (columns
+`discord_id, rating` and optionally `name, rd, vol, games`), then run `import.sql` in the SQL
+editor. Keep the list and the SQL out of the repository. A player claims their rating at their
+first sign-in with that Discord account (or the next visit, if they signed in before the import),
+as long as they haven't played a rated game yet.
 
 ## How the site is published
 

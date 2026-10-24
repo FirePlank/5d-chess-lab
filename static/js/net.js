@@ -2,9 +2,10 @@
 // database functions and the `game` edge function, live updates (Realtime), the server's clock,
 // and the presence pings that let the server tell a player who is here from one who left.
 //
-// Players are anonymous: a random token kept in this browser (localStorage) is the identity, and
-// the server knows it only by its SHA-256 (the player id, `pid`). Each tab has its own id
-// (sessionStorage), so the server can tell a player's tabs apart.
+// A random token kept in this browser (localStorage) is the player's identity, and the server
+// knows it only by its SHA-256 (the player id, `pid`). Signing in (account.js) links the token to
+// an account; signing out starts a fresh token. Each tab has its own id (sessionStorage), so the
+// server can tell a player's tabs apart.
 import { toast } from './util.js';
 
 export const SUPABASE_URL = 'https://iazwinlpwqcdamnybzll.supabase.co';
@@ -42,6 +43,11 @@ function loadTab() {
 }
 
 export const token = loadToken();
+
+/** A fresh token for this browser from the next page load on (after signing out). */
+export function forgetToken() {
+  try { localStorage.removeItem('kairos.playerToken'); } catch (e) { /* private mode */ }
+}
 export const tab = loadTab();
 
 /** This player's id (the SHA-256 of the token, in hex), as the server knows it. */
@@ -51,11 +57,16 @@ export const pid = (async () => {
 })();
 
 let client = null;
-/** The Supabase client (vendor/supabase-*.js), or null where it did not load. */
+/**
+ * The Supabase client (vendor/supabase-*.js), or null where it did not load. Its session (a
+ * signed-in account, account.js) persists in this browser; the sign-in redirect comes back with
+ * a PKCE code in the query string, which it exchanges on load (the page's own routes live in the
+ * hash).
+ */
 export function sb() {
   if (!client && self.supabase && self.supabase.createClient) {
     client = self.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'kairos.auth' },
     });
   }
   return client;
@@ -118,12 +129,17 @@ export function rpc(fn, args = {}) {
   return p;
 }
 
-async function call(fn, args) {
+/** Call a database function that reads public data (no player token). Throws ServerError. */
+export function query(fn, args = {}) {
+  return call(fn, args, false);
+}
+
+async function call(fn, args, withToken = true) {
   const c = sb();
   if (!c) throw new ServerError('Online play is not available here.', { network: true });
   let res;
   try {
-    res = await c.rpc(fn, { p_token: token, ...args });
+    res = await c.rpc(fn, withToken ? { p_token: token, ...args } : args);
   } catch (e) {
     setOnline(false);
     throw new ServerError('You are disconnected.', { network: true });

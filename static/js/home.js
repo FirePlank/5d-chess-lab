@@ -9,6 +9,7 @@ import { preview } from './openings.js';
 import { sounds } from './sound.js';
 import { sb, rpc, pid, tab, live, setPresence, serverNow, syncClock, report, onConnection } from './net.js';
 import { tcLabel, tcText, speed, clockText } from './tc.js';
+import { ratingText } from './account.js';
 import { $, el, toast } from './util.js';
 
 const TAGLINES = [
@@ -130,7 +131,8 @@ export class Home {
   }
 
   async loadSeeks() {
-    const { data, error } = await sb().from('seeks').select('id,created_at,owner,variant,base_ms,inc_ms,delay_ms,tl_delay_ms,color').order('created_at');
+    const { data, error } = await sb().from('seeks')
+      .select('id,created_at,owner,variant,base_ms,inc_ms,delay_ms,tl_delay_ms,color,rated,owner_name,owner_rating,owner_provisional').order('created_at');
     if (error) return;
     const fresh = new Map(data.map((s) => [s.id, s]));
     this.seeks = fresh;
@@ -217,9 +219,11 @@ export class Home {
         dataset: { id: s.id }, title: mine ? 'Cancel seek' : 'Accept seek', tabindex: '0',
         'aria-disabled': graced ? 'true' : 'false',
       },
-      el('span', { role: 'cell', class: 'seek-player' }, side, mine ? '(You)' : 'Anonymous'),
+      el('span', { role: 'cell', class: 'seek-player' }, side, mine ? '(You)' : s.owner_name || 'Anonymous',
+        s.owner_rating != null && !mine ? el('span', { class: 'seek-rating', text: ratingText(s.owner_rating, s.owner_provisional) }) : null),
       el('span', { role: 'cell', class: 'seek-variant', text: s.variant.replace(/^Standard - /, '') }),
-      el('span', { role: 'cell', class: 'seek-time', title: `${speed(tc)} · ${tcText(tc)}` }, el('span', { class: 'speed', text: speed(tc) }), tcLabel(tc)));
+      el('span', { role: 'cell', class: 'seek-time', title: `${speed(tc)} · ${tcText(tc)} · ${s.rated ? 'Rated' : 'Casual'}` },
+        el('span', { class: 'speed', text: speed(tc) }), tcLabel(tc), s.rated ? el('span', { class: 'seek-rated', text: 'Rated' }) : null));
       row.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.clickSeek(row); } };
       return row;
     }));
@@ -279,7 +283,7 @@ export class Home {
   async loadGames() {
     pid.then((p) => { this.mePid = p; });
     const { data, error } = await sb().from('live_games')
-      .select('id,variant,position,moves,ply,white,black,engine_color,engine_level,private,base_ms,inc_ms,delay_ms,tl_delay_ms,white_ms,black_ms,color_ticking,turn_started_at,turn_delay_ms,result,termination,ended_at,updated_at')
+      .select('id,variant,position,moves,ply,white,black,engine_color,engine_level,private,base_ms,inc_ms,delay_ms,tl_delay_ms,white_ms,black_ms,color_ticking,turn_started_at,turn_delay_ms,result,termination,ended_at,updated_at,rated,white_name,black_name,white_rating,black_rating,white_rd,black_rd')
       .order('updated_at', { ascending: false }).limit(50);
     if (error) return;
     this.games = new Map(data.map((g) => [g.id, g]));
@@ -311,9 +315,14 @@ export class Home {
   }
 
   card(g) {
-    const name = (side) => (g.engine_color === side ? `Kairos${g.engine_level < 8 ? ` · Level ${g.engine_level}` : ''}` : 'Anonymous');
+    const name = (side) => (g.engine_color === side ? `Kairos${g.engine_level < 8 ? ` · Level ${g.engine_level}` : ''}`
+      : (side === 1 ? g.white_name : g.black_name) || 'Anonymous');
+    const rating = (side) => {
+      const r = side === 1 ? g.white_rating : g.black_rating;
+      return g.rated && r != null ? el('span', { class: 'fg-rating', text: ratingText(Math.trunc(r), (side === 1 ? g.white_rd : g.black_rd) >= 110) }) : null;
+    };
     const bar = (side) => el('div', { class: 'fg-bar' }, el('span', { class: `side-dot ${side === 1 ? 'white' : 'black'}` }), el('span', { class: 'fg-name', text: name(side) }),
-      el('span', { class: 'fg-clock', dataset: { side } }));
+      rating(side), el('span', { class: 'fg-clock', dataset: { side } }));
     let board = el('div', { class: 'fg-board' });
     try {
       this.rules.call({ cmd: 'new', position: g.position });

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy · 5D Chess Lab</title>
+<meta name="description" content="What 5D Chess Lab collects, why, who processes it, and how to have it deleted.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script>
+  // The site's saved theme (the page reads fine without it).
+  try { const t = localStorage.getItem('kairos.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  body { overflow-y: auto; }
+  .policy { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; line-height: 1.6; }
+  .policy h1 { margin: 0 0 4px; color: var(--strong); }
+  .policy h2 { margin: 32px 0 8px; font-size: 19px; color: var(--strong); }
+  .policy p, .policy li { color: var(--text); }
+  .policy table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  .policy th, .policy td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .policy th { color: var(--strong); }
+  .policy .back { display: inline-block; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<main class="policy">
+  <a class="back" href="./">← 5D Chess Lab</a>
+  <h1>Privacy Policy</h1>
+  <p class="muted">Effective 24 October 2026</p>
+
+  <p>5D Chess Lab (<a href="https://fireplank.github.io/5d-chess-lab/">fireplank.github.io/5d-chess-lab</a>) is a free,
+  non-commercial, open-source website for playing and studying 5D Chess With Multiverse Time Travel. Its source code is public at
+  <a href="https://github.com/FirePlank/5d-chess-lab">github.com/FirePlank/5d-chess-lab</a>. This policy says what the site
+  collects, why, who processes it, and how to have it removed. The site has no advertising, no analytics and no trackers, and
+  it never sells or shares your data for marketing.</p>
+
+  <h2>Using the site without an account</h2>
+  <p>Most of the site (the analysis board, the board editor, the tutorial, practice, and games against the engine) runs
+  entirely in your browser; your moves and analysis are not sent anywhere. The site keeps your settings, tutorial progress
+  and the games you save in your browser's local storage, where only you can see them, and you can clear them at any time
+  through your browser.</p>
+  <p>To play online and to keep a puzzle rating, your browser creates a random identifier (a "player token") and stores it
+  locally. Our server only ever stores a one-way hash of it, which is not linked to your name or any other personal
+  information unless you sign in.</p>
+
+  <h2>Signing in with Discord or Google</h2>
+  <p>You can sign in with Discord or Google to play rated games and keep a rating and a profile. Signing in is optional.
+  When you do, the provider sends us, and we store:</p>
+  <ul>
+    <li>your account id at that provider (for Discord, your Discord user id);</li>
+    <li>your display name and profile picture address;</li>
+    <li>your email address (it is never shown to anyone, and we do not email you).</li>
+  </ul>
+  <p>We use your Discord user id to look you up in the 5D chess community's existing rating list, so that a player who
+  already has a community rating starts from it. We use your display name as your public name on the site. We do not
+  request access to your messages, friends, servers, contacts, files or anything else at either provider, and we cannot post
+  anything on your behalf.</p>
+
+  <h2>What is public</h2>
+  <p>Like other chess sites, online play is public by nature:</p>
+  <ul>
+    <li>your public name, rating and profile page, with your results and the games you played;</li>
+    <li>the records of finished online games (moves, clocks, result, and both players' names and ratings);</li>
+    <li>games in progress, which anyone can watch, and open games in the lobby.</li>
+  </ul>
+  <p>Players who are not signed in appear as "Anonymous".</p>
+
+  <h2>Everything we store, and why</h2>
+  <table>
+    <thead><tr><th>Data</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Hashed player token</td><td>To know which player is which in online games, puzzles and the lobby.</td></tr>
+      <tr><td>Account details from Discord or Google (above)</td><td>To sign you in, show your name, and carry over a community rating.</td></tr>
+      <tr><td>Your rating and rated results</td><td>To pair and rate games fairly and show your profile.</td></tr>
+      <tr><td>Games you play online, with move times</td><td>To run the game (clocks), keep its record, and show your history.</td></tr>
+      <tr><td>Chat messages in private games</td><td>To deliver them to your opponent during the game.</td></tr>
+      <tr><td>Short-lived presence pings (which page of the site a tab is on)</td><td>To tell a player who left a game from one who is still there; kept for a day.</td></tr>
+      <tr><td>Puzzle attempts</td><td>To rate puzzles and you, and not to repeat puzzles you have played.</td></tr>
+    </tbody>
+  </table>
+  <p>We may use game records, including move times, to detect players who use an engine in rated games, as other chess sites
+  do. Using engine assistance in rated games is not allowed.</p>
+
+  <h2>Who processes the data</h2>
+  <ul>
+    <li><b>Supabase</b> (supabase.com) hosts the database, sign-in and the online-play server.</li>
+    <li><b>GitHub Pages</b> (github.com) serves the website's files.</li>
+    <li><b>Discord</b> and <b>Google</b> handle sign-in when you choose them, under their own privacy policies.</li>
+  </ul>
+  <p>These services see your IP address and browser details when your browser contacts them, as any website host does; we do
+  not store IP addresses ourselves.</p>
+
+  <h2>How long we keep it</h2>
+  <p>Account data, ratings and game records are kept while the site exists or until you ask us to delete them. Presence pings
+  are deleted after a day. Data kept in your browser stays there until you clear it.</p>
+
+  <h2>Your choices and rights</h2>
+  <ul>
+    <li>You can use almost the whole site without an account, and sign out at any time.</li>
+    <li>You can ask us to delete your account: we then delete your account details and profile, and your finished games stay
+    in the public record as played by "Anonymous".</li>
+    <li>You can ask for a copy of the data we hold about you, or for it to be corrected.</li>
+    <li>You can revoke the site's access from your Discord or Google account settings at any time.</li>
+  </ul>
+  <p>If you are in the European Economic Area or the United Kingdom, the GDPR gives you these rights, and the legal bases we
+  rely on are performing the service you asked for (online play and accounts) and our legitimate interest in fair play.
+  You may also complain to your data-protection authority.</p>
+
+  <h2>Children</h2>
+  <p>The site is not directed at children under 13, and we do not knowingly collect personal data from them. If you believe a
+  child has signed in, contact us and we will delete the account.</p>
+
+  <h2>Changes</h2>
+  <p>We will post any changes to this policy on this page with a new effective date.</p>
+
+  <h2>Contact</h2>
+  <p>For questions, data requests or deletion, open an issue at
+  <a href="https://github.com/FirePlank/5d-chess-lab/issues">github.com/FirePlank/5d-chess-lab/issues</a>, or message the
+  maintainer, FirePlank, on the 5D chess community Discord. For a private request, ask there for a private channel and do not
+  post personal details in a public issue.</p>
+</main>
+</body>
+</html>

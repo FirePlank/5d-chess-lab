@@ -26,7 +26,9 @@ function kairosPage(hash) {
   if (head === 'puzzles' && id && id !== 'themes') params.set('id', id);
   // #/tutorial: the lessons; #/tutorial/<lesson>: that lesson.
   if (head === 'tutorial' && id) params.set('lesson', id);
-  const pages = ['home', 'puzzles', 'analysis', 'editor', 'games', 'rules', 'openings', 'practice', 'tutorial'];
+  // #/player/<user id>: a player's profile.
+  if (head === 'player' && id) params.set('id', id);
+  const pages = ['home', 'puzzles', 'analysis', 'editor', 'games', 'rules', 'openings', 'practice', 'tutorial', 'player'];
   let name = pages.includes(head) ? head : head === 'game' && id ? 'game' : 'home';
   if (head === 'puzzles' && (id === 'themes' || (!id && !params.get('new')))) name = 'puzzlethemes';
   return { name, params };
@@ -53,6 +55,7 @@ function kairosShow(name) {
   toggle('#openings', name !== 'openings');
   toggle('#rules', name !== 'rules');
   toggle('#browser', name !== 'games');
+  toggle('#player', name !== 'player');
   toggle('#side-analysis', name !== 'analysis');
   toggle('#side-play', name !== 'play');
   toggle('#side-editor', name !== 'editor');
