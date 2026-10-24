@@ -77,10 +77,22 @@
       <tr><td>Chat messages in private games</td><td>To deliver them to your opponent during the game.</td></tr>
       <tr><td>Short-lived presence pings (which page of the site a tab is on)</td><td>To tell a player who left a game from one who is still there; kept for a day.</td></tr>
       <tr><td>Puzzle attempts</td><td>To rate puzzles and you, and not to repeat puzzles you have played.</td></tr>
+      <tr><td>How each of your turns went in online games against people: how long it took, how long the game's page was hidden
+      or out of focus meanwhile, when you first touched the board, whether another tab of the same browser showed the
+      game's live position on the analysis board or tried to run the engine, and a fingerprint of your browser (a hash of
+      what it shows every website: its version, languages, screen, time zone and how it draws text)</td><td>Fair play: to
+      detect engine assistance. Never public; kept for 180 days.</td></tr>
+      <tr><td>What the analysis board shows, as a hash of the position, with your browser's fingerprint (and your account, if you
+      are signed in)</td><td>Fair play: only to notice an analysis board showing the live position of a rated game you are
+      playing. Kept only when it matches (180 days); otherwise it is not stored.</td></tr>
+      <tr><td>Fair-play assessments of rated games, and any case opened about an account</td><td>Fair play. Only the site's
+      admins can see them.</td></tr>
     </tbody>
   </table>
-  <p>We may use game records, including move times, to detect players who use an engine in rated games, as other chess sites
-  do. Using engine assistance in rated games is not allowed.</p>
+  <p><b>Fair play.</b> Using engine assistance in rated games is not allowed. After a rated game between two people ends, Kairos
+  analyses it, as other chess sites do with their games, and an account whose play matches the engine's far more often than
+  its rating explains is flagged for an admin to review. Nothing is decided automatically: an admin looks at the evidence
+  before an account is barred from rated games. How the detection works is public (see the site's source code).</p>
 
   <h2>Who processes the data</h2>
   <ul>
@@ -93,7 +105,7 @@
 
   <h2>How long we keep it</h2>
   <p>Account data, ratings and game records are kept while the site exists or until you ask us to delete them. Presence pings
-  are deleted after a day. Data kept in your browser stays there until you clear it.</p>
+  are deleted after a day, and the turn measurements above after 180 days. Data kept in your browser stays there until you clear it.</p>
 
   <h2>Your choices and rights</h2>
   <ul>

@@ -8,10 +8,11 @@ import { prefs } from './prefs.js';
 import { positionFromView, continueFrom } from './position.js';
 import { openingAt, renderOpening, openingLink } from './opening.js';
 import { apiGet } from './static-api.js';
-import { sb } from './net.js';
+import { sb, query } from './net.js';
 import { puzzleRecord } from './puzzles.js';
 import { getGame, saveGame, putGame, recordLine } from './history.js';
 import { $, $$, el, toast, fmtScore, fmtNodes, winChance, recordScore, parseLan, store, confirmDialog, onWindow } from './util.js';
+import * as fairplay from './fairplay.js';
 
 const THROTTLE_MS = 70;
 /** "Go deeper" searches the current position to this depth. */
@@ -418,6 +419,10 @@ export class Analysis {
 
   onView(v, draft) {
     this.view = v;
+    // Fair play: the analysis board on a game that is live in another tab says so, and the server
+    // hears what it shows, for a live rated game of this account or browser (fairplay.js).
+    fairplay.analysing(v);
+    fairplay.reportAnalysis(v, (key, fp) => query('fairplay_seen', { p_key: key, p_fp: fp }));
     this.autoFlip(v, draft);
     const chip = $('#status-chip');
     chip.className = 'status-line';

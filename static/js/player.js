@@ -4,6 +4,7 @@
 // against people and against Kairos on separate tabs. Each game opens its game page.
 import { query, report } from './net.js';
 import { ratingText, profileHref } from './account.js';
+import { profileControls } from './admin.js';
 import { tcLabel, tcText } from './tc.js';
 import { $, $$, el } from './util.js';
 
@@ -60,6 +61,10 @@ export class PlayerPage {
 
   renderHead(p) {
     $('#pl-name').textContent = p.name;
+    $('#pl-badges').replaceChildren(...[
+      p.admin && el('span', { class: 'pl-badge admin', text: 'Admin' }),
+      p.banned && el('span', { class: 'pl-badge banned', text: 'Barred from rated games', title: 'Banned for fair play' })].filter(Boolean));
+    $('#pl-admin').replaceChildren(...[profileControls(p, () => this.load())].filter(Boolean));
     const since = new Date(p.created_at);
     $('#pl-since').textContent = `Member since ${since.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}`
       + (p.imported ? ' · rating from the 5D rating list' : '');

@@ -54,6 +54,7 @@
     </div>
   </nav>
   <div class="site-actions">
+    <a class="admin-btn hidden" id="btn-admin" href="#/admin" title="Fair play">Fair play<span class="admin-count hidden" id="btn-admin-count"></span></a>
     <button class="acct-btn" id="btn-account" type="button"><span>Sign in</span></button>
     <button class="icon-btn" id="btn-sound" title="Mute sounds" aria-label="Sound effects" aria-pressed="true"><svg><use href="#i-sound"/></svg></button>
     <button class="icon-btn" id="btn-board-theme" title="Board colours" aria-label="Board colours"><svg><use href="#i-palette"/></svg></button>
@@ -660,8 +661,9 @@
       <div id="pl-main" class="hidden">
         <header class="panel pl-head">
           <div class="pl-who">
-            <h1 id="pl-name"></h1>
+            <h1><span id="pl-name"></span><span class="pl-badges" id="pl-badges"></span></h1>
             <span class="muted" id="pl-since"></span>
+            <div id="pl-admin"></div>
           </div>
           <div class="pl-rating"><span class="pl-rating-v" id="pl-rating"></span><span class="muted" id="pl-rd"></span></div>
         </header>
@@ -685,6 +687,43 @@
           <p class="muted pl-empty hidden" id="pl-empty">No games yet.</p>
           <button type="button" class="btn sm hidden" id="pl-more">More games</button>
         </section>
+      </div>
+    </div>
+  </section>
+  <!-- ============================== Fair play for admins (admin.js) -->
+  <section class="player-page admin-page hidden" id="admin">
+    <div class="player-inner">
+      <p class="muted hidden" id="ad-denied">This page is for admins.</p>
+      <div id="ad-list" class="hidden">
+        <h1 class="ad-title">Fair play</h1>
+        <p class="muted ad-lead">Cases the detector opened from rated games between people. See <a href="https://github.com/FirePlank/5d-chess-lab/blob/main/docs/FAIR_PLAY.md" target="_blank" rel="noopener">how it works</a>.</p>
+        <section class="panel">
+          <div class="seg pl-tabs" id="ad-tabs" role="tablist">
+            <button type="button" data-status="open" class="on" role="tab">Open</button>
+            <button type="button" data-status="dismissed" role="tab">Dismissed</button>
+            <button type="button" data-status="banned" role="tab">Banned</button>
+            <button type="button" data-status="all" role="tab">All</button>
+          </div>
+          <div class="table-wrap">
+            <table class="games pl-table">
+              <thead><tr><th>Opened</th><th>Player</th><th class="num">Rating</th><th class="num">Games</th><th>Reason</th><th class="num">Score</th><th>Status</th></tr></thead>
+              <tbody id="ad-list-body"></tbody>
+            </table>
+          </div>
+          <p class="muted pl-empty hidden" id="ad-list-empty">No cases.</p>
+        </section>
+      </div>
+      <div id="ad-case" class="hidden">
+        <a class="muted ad-back" href="#/admin">← All cases</a>
+        <header class="panel ad-head" id="ad-case-head"></header>
+        <section class="panel ad-decide hidden" id="ad-decide">
+          <textarea id="ad-note" rows="2" maxlength="2000" placeholder="A note on the decision (only admins see it)"></textarea>
+          <div class="ad-actions">
+            <button type="button" class="btn" id="ad-dismiss">Dismiss</button>
+            <button type="button" class="btn danger" id="ad-ban">Ban</button>
+          </div>
+        </section>
+        <div id="ad-games"></div>
       </div>
     </div>
   </section>

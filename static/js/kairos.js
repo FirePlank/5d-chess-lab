@@ -3,6 +3,7 @@
 // wasm32-wasip1-threads): it always runs on shared memory, and the engine also runs its Lazy SMP
 // helper threads in Web Workers when the page is cross-origin isolated (the kairos-web server
 // sends COOP/COEP), which is what lets workers share that memory. Otherwise it uses one thread.
+import { gameElsewhere, enginePaused } from './fairplay.js';
 import { instantiate, importedMemory, makeClock, stopClock } from './wasi.js';
 
 let modulePromise = null;
@@ -166,6 +167,13 @@ export class Engine {
     const id = ++this.reqId;
     await this.start();
     if (id !== this.reqId) return id; // superseded while the engine started
+    // An online game against a person is live in another tab of this browser: no engine here
+    // (as lichess turns its analysis off), and that game's tab hears of the attempt.
+    if (gameElsewhere()) {
+      enginePaused();
+      this.emit({ type: 'error', id, message: 'The engine is off while you play an online game in another tab.' });
+      return id;
+    }
     if (this.busy) {
       this.interruptRunning();
       // Without shared memory the worker was replaced.

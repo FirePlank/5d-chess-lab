@@ -1,5 +1,5 @@
-// Your games: your online games (played from this browser; stored on the server, read back by
-// this browser's player id), the games you finished against Kairos on the old Play page and the
+// Your games: your online games (played from this browser, or with your account from any
+// browser once you are signed in; stored on the server), the games you finished against Kairos on the old Play page and the
 // analyses you saved on the analysis board (kept in this browser, history.js). An online game
 // opens on its game page, the others on the analysis board; a local one's name and players can
 // be edited, and the local ones exported as JSONL records.
@@ -7,6 +7,7 @@ import { $, el, toast, confirmDialog } from './util.js';
 import { listGames, deleteGame, clearGames, recordLine, updateGame } from './history.js';
 import { sb, pid } from './net.js';
 import { resultText } from './online.js';
+import { account } from './account.js';
 import { tcLabel } from './tc.js';
 
 /** Your online games from the server (finished, with at least one action), newest first. */
@@ -14,9 +15,10 @@ async function onlineGames() {
   const c = sb();
   if (!c) return [];
   const me = await pid;
+  const user = account.profile && account.profile.user_id;
   const { data, error } = await c.from('player_games')
     .select('color, score, game:games(id, created_at, ended_at, variant, result, termination, move_count, base_ms, inc_ms, delay_ms, tl_delay_ms, white_name, black_name)')
-    .eq('player', me).limit(500);
+    .or(user ? `player.eq.${me},user_id.eq.${user}` : `player.eq.${me}`).limit(500);
   if (error || !data) return [];
   return data.filter((r) => r.game).map((r) => {
     const g = r.game;
@@ -59,6 +61,8 @@ export class Games {
       }
     };
     $('#edit-save').onclick = (e) => { e.preventDefault(); this.saveEdit(); };
+    // Signing in (or the session coming back) adds the account's games from other browsers.
+    account.onChange(() => { if (this.app.route === 'games') this.load(); });
   }
 
   activate() { this.load(); }

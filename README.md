@@ -116,6 +116,8 @@ node tests/records.mjs games/sprt/*.jsonl   # replay records: actions, book and 
 node tests/pgn_corpus.mjs <dir>             # load every 5dpgn file under a directory
 node tests/online-sql.mjs                   # the online-play database in PGlite (npm i --prefix .tools @electric-sql/pglite)
 node tests/accounts-sql.mjs                 # accounts, the rating import, rated games and profiles in PGlite
+node tests/fairplay-sql.mjs                 # admins, a guest's history moving to the account, fair play in PGlite
+node tests/fairplay-score.mjs               # fair play's judging, signal rules and bet
 deno run -A tests/online-fn.ts              # the game edge function with the rules core (after cargo wasm-server)
 ```
 
@@ -149,6 +151,15 @@ The community ratings: `python scripts/import_ratings.py ratings.csv > import.sq
 editor. Keep the list and the SQL out of the repository. A player claims their rating at their
 first sign-in with that Discord account (or the next visit, if they signed in before the import),
 as long as they haven't played a rated game yet.
+
+### Admins and fair play
+
+Admins review fair-play cases at `#/admin` and can make other accounts admins or ban them from
+their profile pages; the owner's account is an admin from its first sign-in. When a guest signs
+in, their games and puzzle history from that browser move into the account. Rated games between
+people are analysed after they end by `scripts/fairplay/detect.mjs` on GitHub Actions, started by
+the database only when such games are waiting. How it works and its one-time setup (a detector
+key, a GitHub token and the admins' Discord webhook): [docs/FAIR_PLAY.md](docs/FAIR_PLAY.md).
 
 ## How the site is published
 

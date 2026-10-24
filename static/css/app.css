@@ -1320,7 +1320,7 @@ html[data-home-prompt="dismissed"] .new-prompt { display: none; }
 .acct-btn.signed-in { background: none; }
 .acct-btn .acct-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acct-btn .acct-rating { color: var(--muted); font-weight: 500; }
-.acct-dialog .modal-body { max-width: 420px; }
+.acct-dialog { width: min(440px, calc(100vw - 2 * var(--s3))); }
 .acct-dialog h2 { margin-top: 0; }
 .acct-providers { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
 .acct-provider { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 44px; font-weight: 600; }
@@ -1378,8 +1378,50 @@ a.pname[href]:hover { text-decoration: underline; }
 .pl-res { font-weight: 600; }
 .pl-empty { margin: 8px 0 0; }
 #pl-more { margin-top: 10px; }
+.pl-badges { display: inline-flex; gap: 6px; margin-left: 10px; vertical-align: middle; }
+.pl-badge { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--inset); color: var(--muted); }
+.pl-badge.admin { color: var(--accent); }
+.pl-badge.banned { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.pl-admin { display: flex; gap: 8px; margin-top: 10px; }
+
+/* Fair play for admins (admin.js) */
+.admin-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: var(--r-sm); font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; }
+.admin-btn:hover { color: var(--strong); background: var(--hover); }
+.admin-count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+.admin-page .player-inner > div { display: flex; flex-direction: column; gap: 16px; }
+.admin-page .player-inner > div.hidden { display: none; }
+.ad-title { margin: 0; font-size: 26px; color: var(--strong); }
+.ad-lead { margin: -8px 0 0; font-size: 13.5px; }
+.admin-page .panel { padding: 14px 16px; }
+.ad-back { font-size: 13px; }
+.ad-head { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.ad-who h1 { margin: 0 0 4px; font-size: 24px; }
+.ad-who h1 a { color: var(--strong); }
+.ad-who .muted { font-size: 13px; }
+.ad-facts { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 0; font-size: 13px; }
+.ad-facts dt { color: var(--muted); }
+.ad-facts dd { margin: 0; }
+.ad-status.open { color: var(--bad); font-weight: 600; }
+.ad-status.banned { color: var(--bad); }
+.ad-status.dismissed { color: var(--muted); }
+.ad-decide { display: flex; flex-direction: column; gap: 10px; }
+.ad-decide textarea { height: 64px; font: inherit; font-size: 13px; }
+.ad-actions { display: flex; gap: 8px; justify-content: flex-end; }
+#ad-games { display: flex; flex-direction: column; gap: 12px; }
+.ad-game.flagged { border-color: var(--bad); }
+.ad-game-head { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; font-size: 13.5px; }
+.ad-sum { margin: 8px 0; font-size: 13px; }
+.ad-warn { color: var(--bad); }
+.ad-table td, .ad-table th { font-size: 12.5px; }
+.ad-table tr.ad-flag { background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.ad-out.top { color: var(--bad); font-weight: 600; }
+.ad-out.good { color: var(--text); }
+.ad-out.miss { color: var(--muted); }
 @media (max-width: 652px) {
   .acct-btn .acct-name { max-width: 80px; }
+  .admin-btn { font-size: 0; gap: 0; padding: 0 6px; }
+  .admin-btn::before { content: "⚑"; font-size: 15px; }
+  .admin-count { margin-left: 4px; }
   .pl-head { flex-direction: column; align-items: flex-start; }
   .pl-rating { align-items: flex-start; }
 }

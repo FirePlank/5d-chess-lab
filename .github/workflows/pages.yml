@@ -101,6 +101,8 @@ jobs:
           node tests/online-sql.mjs
           node tests/puzzles-sql.mjs
           node tests/accounts-sql.mjs
+          node tests/fairplay-sql.mjs
+          node tests/fairplay-score.mjs
           deno run -A tests/online-fn.ts
 
       - name: Checks of the browser build

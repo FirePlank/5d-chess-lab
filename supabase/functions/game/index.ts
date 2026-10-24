@@ -5,9 +5,9 @@
 //
 // POST {action: 'create_seek', token, tab, private, variant, base_ms, inc_ms, delay_ms, tl_delay_ms, color, rated}
 // POST {action: 'create_engine_game', token, tab, variant, base_ms, inc_ms, delay_ms, tl_delay_ms, color, level, version, book}
-// POST {action: 'move', token, tab, id, ply, lan}
+// POST {action: 'move', token, tab, id, ply, lan, signals}   (signals: what the page saw during the turn)
 // `variant` is a built-in variant's name or a 5DUCI position.
-import { call, playAction, rules, startOf } from '../_shared/rules.ts';
+import { call, playAction, positionKey, rules, startOf } from '../_shared/rules.ts';
 
 type Json = Record<string, any>;
 
@@ -59,6 +59,22 @@ function color(v: unknown) {
   if (v == null) return null;
   if (v !== 1 && v !== 2) throw new UserError('Choose a side.');
   return v;
+}
+
+/**
+ * The page's interaction signals for an action (fair play): known keys only, each a bounded
+ * number or a boolean; anything else is dropped (null when nothing is left).
+ */
+export function signals(v: unknown): Json | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const out: Json = {};
+  for (const [k, max] of [['turn_ms', 86400000], ['hidden_ms', 86400000], ['blurred_ms', 86400000], ['hides', 10000], ['blurs', 10000], ['first_input_ms', 86400000]] as const) {
+    const n = (v as Json)[k];
+    if (typeof n === 'number' && Number.isFinite(n)) out[k] = Math.max(0, Math.min(max, Math.round(n)));
+  }
+  for (const k of ['engine_tab', 'engine_paused']) if ((v as Json)[k] === true) out[k] = true;
+  if (typeof (v as Json).fp === 'string' && /^[0-9a-f]{32}$/.test((v as Json).fp)) out.fp = (v as Json).fp;
+  return Object.keys(out).length ? out : null;
 }
 
 function str(v: unknown, what: string, max = 128) {
@@ -115,6 +131,7 @@ export async function handle(body: Json, db: Db): Promise<Json> {
       return db.rpc('game_apply_move', {
         p_token: token, p_tab: tab, p_id: id, p_ply: g.ply, p_lan: played.lan, p_san: played.san, p_full: played.sanFull,
         p_lone: played.lone, p_next_to_move: played.toMove === 'w' ? 1 : 2, p_active: played.active, p_status: played.status,
+        p_signals: signals(body.signals), p_key: await positionKey(played.boards),
       });
     }
   }

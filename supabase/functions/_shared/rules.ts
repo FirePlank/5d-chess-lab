@@ -61,6 +61,8 @@ export interface Played {
   active: number;
   /** checkmate | stalemate | exiled-white | exiled-black | null */
   status: string | null;
+  /** The boards after the action (for positionKey). */
+  boards: unknown[][];
 }
 
 /**
@@ -80,8 +82,19 @@ export function playAction(k: Instance, start: string, moves: string[], lan: str
   const status = ['checkmate', 'stalemate', 'exiled-white', 'exiled-black'].includes(v.status) ? v.status : null;
   return {
     node: r.node, lan: n.lan, san: n.san, sanFull: n.sanFull ?? n.san, lone: !!n.lone,
-    toMove: v.player ? 'b' : 'w', active: v.active[1] - v.active[0] + 1, status,
+    toMove: v.player ? 'b' : 'w', active: v.active[1] - v.active[0] + 1, status, boards: v.boards,
   };
+}
+
+/**
+ * A position's hash for fair play: the SHA-256 of its boards (the same position gives the same
+ * hash however it was reached), as static/js/fairplay.js's positionKey computes it on a page
+ * (tests/online-fn.ts checks that they agree).
+ */
+export async function positionKey(boards: unknown[][]) {
+  const text = boards.map((b) => b.join(':')).sort().join('|');
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(d)].slice(0, 16).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**

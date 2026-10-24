@@ -13,6 +13,7 @@ import { lanText } from './input.js';
 import { sb, rpc, edge, pid, tab, live, setPresence, serverNow, syncClock, onConnection, onPing, intent, isOutstanding, report } from './net.js';
 import { tcLabel, tcText, speed, clockText } from './tc.js';
 import { ratingText, profileHref, refreshAccount } from './account.js';
+import * as fairplay from './fairplay.js';
 import { $, el, toast, onWindow } from './util.js';
 
 /** An action block that appears ignores clicks this long (one meant for the block it replaced). */
@@ -59,7 +60,14 @@ export class OnlineGame {
       canMove: () => this.myTurn(),
       blocked: () => this.blockedHint(),
       submit: (moves) => this.submit(moves),
-      onView: (v) => this.onView(v),
+      onView: (v, draft) => {
+        if (draft && draft.length) fairplay.boardTouched();
+        this.onView(v);
+      },
+      onClick: (sq) => {
+        if (sq && this.myTurn()) fairplay.boardTouched();
+        return false;
+      },
     };
     onWindow('notation-change', () => { if (this.tree) this.renderMoves(); });
   }
@@ -120,6 +128,8 @@ export class OnlineGame {
 
   deactivate() {
     this.active = false;
+    fairplay.gameOver();
+    this.turnOn = false;
     this.loading(false);
     this.close();
     $('#challenge').classList.add('hidden');
@@ -455,8 +465,26 @@ export class OnlineGame {
     }
     if (this.role && row.chat_count > this.chatSince) this.loadChat();
     if (row.result) this.stopEngine();
+    this.fairplayTrack();
     this.render();
     this.maybeThink();
+  }
+
+  /**
+   * Fair play (fairplay.js): time our turns, in every game we play (against Kairos too), and
+   * announce a live game against a person to this browser's other tabs.
+   */
+  fairplayTrack() {
+    const r = this.row;
+    if (!r || !this.role || !this.live() || !this.active) {
+      fairplay.gameOver();
+      this.turnOn = false;
+      return;
+    }
+    if (!r.engine_color) fairplay.gameLive(this.id, this.rules.call({ cmd: 'view', node: this.lastNode(), draft: [] }).view, r.ply);
+    const mine = r.to_move === this.role && !this.pending;
+    if (mine && !this.turnOn) fairplay.turnStarted();
+    this.turnOn = mine;
   }
 
   nodeAtPly(ply) {
@@ -500,18 +528,21 @@ export class OnlineGame {
     this.pending = { ply, lan: this.tree.nodes[p.node].lan };
     sounds.action(this.tree.nodes[p.node].san, { move: false, check: true });
     this.restoreTitle();
+    this.turnOn = false;
+    const signals = fairplay.takeSignals();
     this.render();
-    await this.send(ply, this.pending.lan);
+    await this.send(ply, this.pending.lan, signals);
   }
 
-  async send(ply, lan) {
+  /** Send an action (ours, with its turn's fair-play `signals`, or Kairos's). */
+  async send(ply, lan, signals = undefined) {
     let res;
     try {
-      res = await edge('move', { id: this.id, ply, lan });
+      res = await edge('move', { id: this.id, ply, lan, signals });
     } catch (e) {
       report(e);
       // Sent again once the connection returns (if the game still waits for it).
-      if (e.network) this.retryMove = { ply, lan };
+      if (e.network) this.retryMove = { ply, lan, signals };
       else this.refetch();
       return;
     }
@@ -685,7 +716,7 @@ export class OnlineGame {
       self.className = 'self-disconnect lost';
     } else {
       this.refetch().then(() => {
-        if (this.retryMove && this.row && this.row.ply === this.retryMove.ply) this.send(this.retryMove.ply, this.retryMove.lan);
+        if (this.retryMove && this.row && this.row.ply === this.retryMove.ply) this.send(this.retryMove.ply, this.retryMove.lan, this.retryMove.signals);
         this.retryMove = null;
       });
       if (!self.classList.contains('hidden')) {

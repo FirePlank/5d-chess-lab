@@ -9,6 +9,10 @@ import { pgcrypto } from 'npm:@electric-sql/pglite@0.5.11/contrib/pgcrypto';
 const wasm = new URL('../target/wasm32-wasip1/release/kairos_wasm.wasm', import.meta.url);
 Deno.env.set('KAIROS_WASM_URL', wasm.href);
 const { handle, timeControl } = await import('../supabase/functions/game/index.ts');
+const { rules, call } = await import('../supabase/functions/_shared/rules.ts');
+// The page's fair-play module (its tab channel left out: nothing here listens).
+(globalThis as any).BroadcastChannel = undefined;
+const fairplay = await import('../static/js/fairplay.js');
 
 const assert = (ok: unknown, what: string) => { if (!ok) throw new Error('failed: ' + what); };
 
@@ -21,7 +25,9 @@ const Db = {
   async game(id: string) {
     return (await db.query('select id, position, moves, ply, result, white, black, engine_color, to_move from public.live_games where id = $1', [id])).rows[0] ?? null;
   },
+  last: {} as Record<string, any>,
   async rpc(fn: string, args: Record<string, unknown>) {
+    this.last[fn] = args;
     const names = Object.keys(args);
     const r = await db.query(`select public.${fn}(${names.map((n, i) => `${n} => $${i + 1}`).join(', ')}) as r`, Object.values(args));
     return (r.rows[0] as any).r;
@@ -62,6 +68,15 @@ assert(r.ok, 'reply');
 let g = (await db.query('select * from public.live_games where id = $1', [id])).rows[0] as any;
 assert(g.moves[0].san === '(0T1)Nf3' && g.moves[0].full === '(0T1)Ng1f3', 'notation stored ' + JSON.stringify(g.moves[0]));
 assert(g.color_ticking === 1 && g.turn_delay_ms === 3000, 'clock with 3 s per timeline');
+// The position's hash for fair play is the one a page computes for the same position.
+{
+  const k = await rules();
+  call(k, { cmd: 'new', position: g.position });
+  const node = call(k, { cmd: 'play_line', node: 0, line: '(0T1)g1f3 submit (0T1)g8f6 submit' }).node;
+  const view = call(k, { cmd: 'view', node, draft: [] }).view;
+  const key = Db.last.game_apply_move.p_key;
+  assert(/^[0-9a-f]{32}$/.test(key) && key === await fairplay.positionKey(view), 'position key ' + key);
+}
 
 // A custom position against Kairos: the checkmate practice rook, Black (the rook) to mate.
 const e = await handle({ action: 'create_engine_game', token: A, tab: 'tabA2', variant: 'Checkmate Practice - Rook', color: 2, level: 3, version: 'test', book: false, base_ms: null }, Db)

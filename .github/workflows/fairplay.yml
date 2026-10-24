@@ -1,0 +1,40 @@
+# Fair play: Kairos analyses the rated games between people that finished since the last run
+# (scripts/fairplay/detect.mjs; docs/FAIR_PLAY.md). Started only by the database
+# (private.fairplay_dispatch, every 15 minutes when such games are waiting) or by hand.
+#
+# The logs of this repository's runs are public, so nothing here prints anything: the detector
+# is silent and only its exit code says whether it worked. What it finds goes to the database,
+# where only admins can read it.
+name: Fair play
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fairplay
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: The site's engine
+        run: |
+          mkdir -p target/wasm32-wasip1-threads/release
+          curl -fsSL -o target/wasm32-wasip1-threads/release/kairos_wasm.wasm https://fireplank.github.io/5d-chess-lab/kairos.wasm
+
+      - name: Analyse the waiting games
+        env:
+          FAIRPLAY_KEY: ${{ secrets.FAIRPLAY_KEY }}
+          FAIRPLAY_DISCORD_WEBHOOK: ${{ secrets.FAIRPLAY_DISCORD_WEBHOOK }}
+        run: node scripts/fairplay/detect.mjs > /dev/null 2>&1
