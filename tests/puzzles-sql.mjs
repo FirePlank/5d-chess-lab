@@ -47,14 +47,15 @@ assert.ok(p1 && p1.id && p1.position && p1.steps, 'a puzzle');
 assert.ok(Math.abs(p1.rating - 1500) < 200, `near 1500: ${p1.rating}`);
 const easy = await call('puzzle_next', { p_token: A, p_offset: -600 });
 assert.ok(easy.rating < 1100, `easiest is easy: ${easy.rating}`);
-const mate = await call('puzzle_next', { p_token: A, p_theme: 'mateIn2' });
+const mate = await call('puzzle_next', { p_token: A, p_theme: 'mateIn2', p_skip: [p1.id, easy.id] });
 assert.ok(mate.themes.includes('mateIn2'));
 const ranged = await call('puzzle_next', { p_token: A, p_min: 2000, p_max: 2200 });
 assert.ok(ranged.rating >= 2000 && ranged.rating <= 2200, `in range: ${ranged.rating}`);
 assert.equal(await call('puzzle_next', { p_token: A, p_min: 5000, p_max: 6000 }), null, 'none in an empty range');
 const skipped = await call('puzzle_next', { p_token: A, p_theme: 'mateIn1' });
-const all1 = +(await one(`select count(*) as n from public.puzzles where themes @> '{mateIn1}'`)).n;
-assert.equal(all1, 4);
+const mate1 = (await q(`select id from public.puzzles where themes @> '{mateIn1}'`)).map((r) => r.id);
+const all1 = mate1.length;
+assert.ok(all1 > 0, 'mateIn1 puzzles');
 
 // A rated win moves both ratings once; a second round changes nothing.
 const r1 = await call('puzzle_round', { p_token: A, p_id: p1.id, p_win: true, p_rated: true });
@@ -69,11 +70,16 @@ const r4 = await call('puzzle_round', { p_token: A, p_id: mate.id, p_win: true, 
 assert.ok(r4.first && r4.diff === null && r4.rating === r3.rating, JSON.stringify(r4));
 
 // Played puzzles are not given again (unless replaying), and get says it was played.
-for (let i = 0; i < all1; i++) {
-  const p = await call('puzzle_next', { p_token: A, p_theme: 'mateIn1' });
-  assert.ok(p, 'one left');
+// (Some of them may be the puzzles played above: those are not given again.)
+const played = new Set([p1.id, easy.id, mate.id]);
+const rated = new Set([p1.id, easy.id]);
+for (let p; (p = await call('puzzle_next', { p_token: A, p_theme: 'mateIn1' }));) {
+  assert.ok(!played.has(p.id), 'a played puzzle is not given again');
+  played.add(p.id);
+  rated.add(p.id);
   await call('puzzle_round', { p_token: A, p_id: p.id, p_win: true, p_rated: true });
 }
+assert.ok(mate1.every((id) => played.has(id)));
 assert.equal(await call('puzzle_next', { p_token: A, p_theme: 'mateIn1' }), null, 'all mateIn1 played');
 assert.ok(await call('puzzle_next', { p_token: A, p_theme: 'mateIn1', p_replay: true }), 'replay gives one');
 const again = await call('puzzle_next', { p_token: A, p_skip: [skipped.id] });
@@ -85,13 +91,13 @@ assert.equal(await call('puzzle_get', { p_token: A, p_id: 'nope' }), null);
 // The dashboard.
 const d = await call('puzzle_dashboard', { p_token: A });
 assert.equal(d.total, total);
-assert.equal(d.played, 3 + all1);
-assert.equal(d.rated, 2 + all1);
+assert.equal(d.played, played.size);
+assert.equal(d.rated, rated.size);
 const m1 = d.themes.find((t) => t.theme === 'mateIn1');
 assert.equal(m1.total, all1);
 assert.equal(m1.played, all1);
 assert.equal(m1.left, 0);
-assert.equal(d.recent.length, 3 + all1);
+assert.equal(d.recent.length, played.size);
 const dr = await call('puzzle_dashboard', { p_token: A, p_min: 1000, p_max: 1200 });
 assert.ok(dr.themes.every((t) => t.in_range <= t.total));
 assert.ok(dr.left < d.left);

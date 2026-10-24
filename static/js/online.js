@@ -71,6 +71,10 @@ export class OnlineGame {
       const c = e.target.closest('[data-id]');
       if (c) this.goto(+c.dataset.id);
     });
+    $('#og-nav-first').onclick = () => this.step('first');
+    $('#og-nav-prev').onclick = () => this.step('prev');
+    $('#og-nav-next').onclick = () => this.step('next');
+    $('#og-nav-last').onclick = () => this.step('last');
     this.confirmable($('#og-draw'), () => this.act('draw', 'game_offer_draw', {}, () => this.canOfferDraw()));
     this.confirmable($('#og-resign'), () => this.act('resign', 'game_resign', {}, () => this.live() && this.row.ply > 1));
     $('#og-abort').onclick = () => this.act('abort', 'game_abort', {}, () => this.live() && this.row.ply <= 2);
@@ -331,8 +335,22 @@ export class OnlineGame {
     if (this.detached) return;
     this.detached = true;
     const { data } = await sb().from('games').select('*').eq('id', this.id).maybeSingle();
-    if (data) this.finished = data;
+    if (data) {
+      this.finished = data;
+      // The row we hold may predate the end (the update never reached us, or the row went
+      // right after it): it takes the record's result, so the clocks stop and the result shows.
+      if (this.row && !this.row.result) this.endWith(data);
+    }
     this.render();
+  }
+
+  /** The held live row, ended as the finished game's record says (and its last actions played). */
+  endWith(game) {
+    const lans = game.moves.map((m) => m.lan);
+    this.row = { ...this.row, result: game.result, termination: game.termination, color_ticking: null, draw_offer: null, white_claim_at: null, black_claim_at: null, moves: game.moves, ply: lans.length };
+    this.applyRow(this.row, { resync: true });
+    this.revealAt = performance.now();
+    if (this.active) sounds.end(game.result, this.role === 1 ? 'w' : this.role === 2 ? 'b' : null);
   }
 
   /** The board from our side (White's for a spectator), framed afresh. */
@@ -710,6 +728,13 @@ export class OnlineGame {
   tick() {
     if (!this.active || !this.row || this.row.base_ms == null) return;
     const r = this.row;
+    // A spectator reads the game again now and then: a realtime message that never came (a
+    // dropped connection, the row gone right after the end) must not leave it watching a
+    // clock that runs on in a game that is over.
+    if (!this.role && this.live() && performance.now() > (this.nextPoll || 0)) {
+      this.nextPoll = performance.now() + 10000;
+      this.refetch();
+    }
     for (const [pos, side] of this.bars()) {
       const { ms, delayLeft } = this.timeLeft(side);
       const running = r.color_ticking === side && !r.result;
@@ -764,6 +789,9 @@ export class OnlineGame {
     }
     const result = r ? r.result : f.result;
     const termination = r ? r.termination : f.termination;
+    const at = this.tree && this.tree.nodes[this.cur];
+    $('#og-nav-first').disabled = $('#og-nav-prev').disabled = !at || at.parent == null;
+    $('#og-nav-next').disabled = $('#og-nav-last').disabled = !at || !at.children.length;
     $('#og-result').classList.toggle('hidden', !result);
     if (result) {
       $('#og-result-score').textContent = result === '*' ? '' : result.replace('1/2-1/2', '½-½');
@@ -920,17 +948,24 @@ export class OnlineGame {
     if (forward) sounds.action(n.san, { check: false });
   }
 
+  /** Step through the actions: to the first, the previous, the next or the last. */
+  step(where) {
+    const n = this.tree && this.tree.nodes[this.cur];
+    if (!n) return;
+    const next = where === 'first' ? 0 : where === 'prev' ? n.parent : where === 'next' ? n.children[n.children.length - 1] : this.lastNode();
+    if (next != null) this.goto(next);
+  }
+
   key(e) {
     const k = e.key;
     if (k === 'Enter' || k === 'f' || k === 'F') this.input.submit();
     else if (k === 'Backspace') this.input.undo();
     else if (k === 'Escape') this.input.clear();
-    else if (k === 'ArrowLeft' || k === 'ArrowRight') {
-      const n = this.tree && this.tree.nodes[this.cur];
-      if (!n) return false;
-      const next = k === 'ArrowLeft' ? n.parent : n.children[n.children.length - 1];
-      if (next != null) this.goto(next);
-    } else return false;
+    else if (k === 'ArrowLeft') this.step('prev');
+    else if (k === 'ArrowRight') this.step('next');
+    else if (k === 'Home' || k === 'ArrowUp') this.step('first');
+    else if (k === 'End' || k === 'ArrowDown') this.step('last');
+    else return false;
     return true;
   }
 }

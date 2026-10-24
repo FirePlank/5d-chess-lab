@@ -337,6 +337,13 @@
           <div class="play-status" id="og-status"></div>
           <div class="tl-line play-tl"></div>
           <div class="moves play-moves" id="og-moves"></div>
+          <!-- Stepping through the actions: for everyone on the page, players and spectators. -->
+          <div class="controls og-nav" role="toolbar" aria-label="Navigate the actions">
+            <button class="ctrl" id="og-nav-first" type="button" title="First (Home)" aria-label="First"><svg><use href="#i-first"/></svg></button>
+            <button class="ctrl" id="og-nav-prev" type="button" title="Previous (←)" aria-label="Previous"><svg><use href="#i-prev"/></svg></button>
+            <button class="ctrl" id="og-nav-next" type="button" title="Next (→)" aria-label="Next"><svg><use href="#i-next"/></svg></button>
+            <button class="ctrl" id="og-nav-last" type="button" title="Last (End)" aria-label="Last"><svg><use href="#i-last"/></svg></button>
+          </div>
           <div class="game-result hidden" id="og-result"><span class="result-score" id="og-result-score"></span><span class="result-text" id="og-result-text"></span></div>
           <div class="og-actions" id="og-actions-live">
             <button class="ctrl-text" type="button" id="og-draw" title="Offer draw"><svg><use href="#i-half"/></svg><span>Offer draw</span></button>
