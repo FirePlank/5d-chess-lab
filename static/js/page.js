@@ -28,10 +28,12 @@ function kairosPage(hash) {
   if (head === 'tutorial' && id) params.set('lesson', id);
   // #/player/<user id>: a player's profile.
   if (head === 'player' && id) params.set('id', id);
+  // #/players and #/leaderboard: the Community pages.
+  if (head === 'players' || head === 'leaderboard') params.set('view', head);
   // #/admin: fair play's cases (admins); #/admin/<case id>: one case.
   if (head === 'admin' && id) params.set('case', id);
   const pages = ['home', 'puzzles', 'analysis', 'editor', 'games', 'rules', 'openings', 'practice', 'tutorial', 'player', 'admin'];
-  let name = pages.includes(head) ? head : head === 'game' && id ? 'game' : 'home';
+  let name = pages.includes(head) ? head : head === 'game' && id ? 'game' : head === 'players' || head === 'leaderboard' ? 'community' : 'home';
   if (head === 'puzzles' && (id === 'themes' || (!id && !params.get('new')))) name = 'puzzlethemes';
   return { name, params };
 }
@@ -44,7 +46,8 @@ function kairosShow(name) {
   const $ = (s) => document.querySelector(s);
   const toggle = (sel, hidden) => { const e = $(sel); if (e) e.classList.toggle('hidden', hidden); };
   // An online game is part of Play.
-  const navRoute = name === 'game' ? 'home' : name === 'puzzlethemes' ? 'puzzles' : name;
+  const navRoute = name === 'game' ? 'home' : name === 'puzzlethemes' ? 'puzzles'
+    : name === 'community' ? (/^#\/leaderboard/.test(location.hash) ? 'leaderboard' : 'players') : name;
   document.querySelectorAll('.site-nav a').forEach((a) => a.classList.toggle('on', a.dataset.route === navRoute));
   document.querySelectorAll('.nav-group').forEach((g) => g.classList.toggle('on', !!g.querySelector(`a[data-route="${navRoute}"]`)));
   toggle('#workspace', !KAIROS_BOARD_PAGES.includes(name));
@@ -59,6 +62,7 @@ function kairosShow(name) {
   toggle('#browser', name !== 'games');
   toggle('#player', name !== 'player');
   toggle('#admin', name !== 'admin');
+  toggle('#community', name !== 'community');
   toggle('#side-analysis', name !== 'analysis');
   toggle('#side-play', name !== 'play');
   toggle('#side-editor', name !== 'editor');

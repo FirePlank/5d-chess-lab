@@ -17,6 +17,8 @@
 // live rated game of the same account or the same browser fingerprint.
 
 const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('kairos-fairplay') : null;
+// Outside a browser (Node runs the tests), the channel must not keep the process alive.
+if (channel && channel.unref) channel.unref();
 /** A live-game announcement this old or newer means a game is on in another tab. */
 const FRESH_MS = 5000;
 /** Positions this early are common to many games: a match there means nothing. */

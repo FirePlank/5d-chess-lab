@@ -1,10 +1,10 @@
-// Accounts: signing in with Discord or Google (Supabase Auth, the PKCE flow), the header's account
-// button and its dialog, and the signed-in profile for the rest of the site. Signing in links this
+// Accounts: signing in with Discord or Google (Supabase Auth, the PKCE flow; the sign-in dialog),
+// signing out, and the signed-in profile for the rest of the site (the header shows it: header.js). Signing in links this
 // browser's player token to the account (account_link), so the server knows who plays from here;
 // signing out unlinks it and starts a fresh token, so the next person on this browser is a guest.
 // Rated games need an account; everything else works as a guest.
 import { sb, rpc, forgetToken, report } from './net.js';
-import { $, el, toast } from './util.js';
+import { $, toast } from './util.js';
 
 /** Where the page was when sign-in left for the provider (the redirect returns without a hash). */
 const RETURN_KEY = 'kairos.authReturn';
@@ -24,9 +24,11 @@ export const account = {
 function set(profile) {
   account.profile = profile;
   account.ready = true;
-  render();
   for (const fn of listeners) fn(profile);
 }
+
+/** The profile changed here (renamed, a new bio): everyone hears of it. */
+export function setProfile(profile) { if (profile) set(profile); }
 
 /** A rating as the site shows it: 1500? while provisional. */
 export function ratingText(rating, provisional) {
@@ -38,10 +40,8 @@ export function ratingText(rating, provisional) {
 export function profileHref(userId) { return `#/player/${userId}`; }
 
 export async function initAccount() {
-  $('#btn-account').onclick = () => openDialog();
   $('#acct-discord').onclick = () => signIn('discord');
   $('#acct-google').onclick = () => signIn('google');
-  $('#acct-signout').onclick = () => signOut();
   const c = sb();
   if (!c) return set(null);
   // Back from the provider: the client exchanged the code; put the page back where it was.
@@ -91,7 +91,8 @@ async function signIn(provider) {
   if (error) toast(`Could not sign in with ${PROVIDERS[provider]}: ${error.message}`, { error: true });
 }
 
-async function signOut() {
+/** Sign out of this browser: it becomes a new guest. */
+export async function signOut() {
   if (window.kairosApp && window.kairosApp.route === 'game' && !confirm('Signing out leaves the game on this page. Sign out anyway?')) return;
   try { await rpc('account_unlink'); } catch (e) { report(e); }
   await sb().auth.signOut().catch(() => {});
@@ -100,25 +101,7 @@ async function signOut() {
   location.reload();
 }
 
-function openDialog() {
-  render();
+/** The sign-in dialog (Discord or Google). */
+export function openSignIn() {
   $('#dlg-account').showModal();
-}
-
-function render() {
-  const p = account.profile;
-  const btn = $('#btn-account');
-  btn.classList.toggle('signed-in', !!p);
-  btn.replaceChildren(...(p
-    ? [el('span', { class: 'acct-name', text: p.name }), el('span', { class: 'acct-rating', text: ratingText(p.rating, p.provisional) })]
-    : [el('span', { text: 'Sign in' })]));
-  btn.title = p ? `${p.name} · ${ratingText(p.rating, p.provisional)}` : 'Sign in to play rated games';
-  $('#acct-out').classList.toggle('hidden', !!p);
-  $('#acct-in').classList.toggle('hidden', !p);
-  if (p) {
-    $('#acct-in-name').textContent = p.name;
-    $('#acct-in-rating').textContent = `${ratingText(p.rating, p.provisional)} ± ${p.rd}`;
-    $('#acct-in-games').textContent = `${p.games} rated game${p.games === 1 ? '' : 's'}${p.imported ? ' · rating from the 5D rating list' : ''}`;
-    $('#acct-profile').href = profileHref(p.user_id);
-  }
 }

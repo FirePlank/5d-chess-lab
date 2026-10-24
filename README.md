@@ -118,6 +118,7 @@ node tests/online-sql.mjs                   # the online-play database in PGlite
 node tests/accounts-sql.mjs                 # accounts, the rating import, rated games and profiles in PGlite
 node tests/fairplay-sql.mjs                 # admins, a guest's history moving to the account, fair play in PGlite
 node tests/fairplay-score.mjs               # fair play's judging, signal rules and bet
+node tests/profiles-sql.mjs                 # profiles (renaming, bio, closing), challenges to a player, community
 deno run -A tests/online-fn.ts              # the game edge function with the rules core (after cargo wasm-server)
 ```
 
@@ -151,6 +152,17 @@ The community ratings: `python scripts/import_ratings.py ratings.csv > import.sq
 editor. Keep the list and the SQL out of the repository. A player claims their rating at their
 first sign-in with that Discord account (or the next visit, if they signed in before the import),
 as long as they haven't played a rated game yet.
+
+### Profiles and the community
+
+A profile (`#/player/<id>`, after lichess's) shows the ratings, the rating history over a chosen
+period, the bio, when the player joined and was last seen, and their activity (each day's games and
+puzzles) or games. Players edit their name (once every 30 days; their games follow) and bio, or
+close their account, from Edit profile; from another player's profile they send a challenge, which
+that player sees in the header (the crossed swords) and accepts or declines. Community →
+Players lists everyone (online first) and Community → Leaderboard ranks the rated players. The
+header's account menu holds the profile links, preferences, sound, theme, board colours and
+signing out.
 
 ### Admins and fair play
 

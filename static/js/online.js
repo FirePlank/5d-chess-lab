@@ -12,7 +12,7 @@ import { preview } from './openings.js';
 import { lanText } from './input.js';
 import { sb, rpc, edge, pid, tab, live, setPresence, serverNow, syncClock, onConnection, onPing, intent, isOutstanding, report } from './net.js';
 import { tcLabel, tcText, speed, clockText } from './tc.js';
-import { ratingText, profileHref, refreshAccount } from './account.js';
+import { account, ratingText, profileHref, refreshAccount } from './account.js';
 import * as fairplay from './fairplay.js';
 import { $, el, toast, onWindow } from './util.js';
 
@@ -122,6 +122,9 @@ export class OnlineGame {
       location.hash = '#/';
       return;
     }
+    // Accept from the header's challenges: the challenge opens and is accepted at once.
+    this.autoAccept = params.get('accept') === '1';
+    if (this.autoAccept) history.replaceState(null, '', `#/game/${id}`);
     // Always (re)open: coming back to a game is a reconnect (the server closes our absence).
     await this.open(id);
   }
@@ -171,23 +174,34 @@ export class OnlineGame {
       return;
     }
     if (this.id !== id) return;
-    if (st.kind === 'open') return this.showChallenge(st);
+    if (st.kind === 'open') {
+      this.showChallenge(st);
+      if (this.autoAccept && !st.owner && !st.ingame) this.acceptChallenge();
+      this.autoAccept = false;
+      return;
+    }
     await this.openGame();
   }
 
   // ---------------------------------------------------------------- the challenge page
   showChallenge(st) {
     this.challenge = st;
+    this.lastChallenge = st;
     $('#workspace').classList.add('hidden');
     $('#challenge').classList.remove('hidden');
     const s = st.seek;
     const tc = { base_ms: s.base_ms, inc_ms: s.inc_ms, delay_ms: s.delay_ms, tl_delay_ms: s.tl_delay_ms };
-    $('#challenge-title').textContent = st.owner ? 'Challenge a friend' : 'Open challenge';
+    const to = s.to_user ? s.to_name : null;
+    $('#challenge-title').textContent = to ? (st.owner ? `Challenge to ${to}` : `Challenge from ${s.owner_name}`)
+      : st.owner ? 'Challenge a friend' : 'Open challenge';
+    $('#challenge-wait').textContent = to ? `Waiting for ${to} to accept. They see your challenge at the top of every page; you can also send them this link:`
+      : 'Send this link to your friend to play:';
     const side = s.color ? (st.owner ? (s.color === 1 ? 'You play White' : 'You play Black') : (s.color === 1 ? 'You play Black' : 'You play White')) : 'Sides drawn at random';
-    $('#challenge-props').replaceChildren(
+    $('#challenge-props').replaceChildren(...[
       el('span', { text: s.variant }), ' · ', el('span', { title: tcText(tc), text: `${speed(tc)} ${tcLabel(tc)}` }), ' · ',
       el('span', { text: s.rated ? 'Rated' : 'Casual' }), ' · ', el('span', { text: side }),
-      !st.owner && s.owner_name ? el('span', { text: ` · from ${s.owner_name}${s.owner_rating != null ? ` (${ratingText(s.owner_rating, s.owner_provisional)})` : ''}` }) : null);
+      !st.owner && s.owner_name ? el('span', { text: ` · from ${s.owner_name}${s.owner_rating != null ? ` (${ratingText(s.owner_rating, s.owner_provisional)})` : ''}` }) : null,
+    ].filter((x) => x != null));
     try {
       this.rules.call({ cmd: 'new', position: s.position });
       $('#challenge-preview').replaceChildren(preview(this.rules.call({ cmd: 'view', node: 0, draft: [] }).view));
@@ -197,7 +211,10 @@ export class OnlineGame {
     $('#challenge-link').textContent = this.link();
     $('#challenge-ingame').classList.toggle('hidden', !st.ingame);
     if (st.ingame) $('#challenge-rejoin').href = `#/game/${st.ingame.id}`;
-    $('#challenge-accept').disabled = !!st.ingame;
+    const mine = !s.to_user || (account.profile && account.profile.user_id === s.to_user);
+    $('#challenge-accept').disabled = !!st.ingame || !mine;
+    $('#challenge-notyours').classList.toggle('hidden', mine);
+    if (!mine) $('#challenge-notyours').textContent = `This challenge is for ${s.to_name}.`;
     // The owner's page keeps the challenge alive (it expires 10 minutes after the owner leaves).
     if (st.owner) setPresence('challenge', this.id);
     const id = this.id;
@@ -238,7 +255,9 @@ export class OnlineGame {
       setPresence(null);
       await this.openGame();
     } else {
-      toast('The challenge was cancelled.');
+      // The owner's page only sees it go when it wasn't them: declined (or expired).
+      const st0 = this.lastChallenge;
+      toast(st0 && st0.owner && st0.seek.to_name ? `${st0.seek.to_name} declined your challenge.` : 'The challenge was cancelled.');
       location.hash = '#/';
     }
   }
@@ -263,6 +282,7 @@ export class OnlineGame {
   }
 
   async cancelChallenge() {
+    this.challenge = null; // our own cancel: no "declined" when its seek goes
     try {
       await rpc('seek_cancel', { p_id: this.id });
       location.hash = '#/';

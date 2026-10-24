@@ -3,7 +3,7 @@
 // every action against the Kairos rules before the database applies it (game_apply_move: the
 // clocks, the result). Everything else a page does goes to the database functions directly.
 //
-// POST {action: 'create_seek', token, tab, private, variant, base_ms, inc_ms, delay_ms, tl_delay_ms, color, rated}
+// POST {action: 'create_seek', token, tab, private, variant, base_ms, inc_ms, delay_ms, tl_delay_ms, color, rated, to_user}
 // POST {action: 'create_engine_game', token, tab, variant, base_ms, inc_ms, delay_ms, tl_delay_ms, color, level, version, book}
 // POST {action: 'move', token, tab, id, ply, lan, signals}   (signals: what the page saw during the turn)
 // `variant` is a built-in variant's name or a 5DUCI position.
@@ -94,6 +94,8 @@ export async function handle(body: Json, db: Db): Promise<Json> {
         p_setup: s.setup, p_start_to_move: s.toMove === 'w' ? 1 : 2, p_start_active: s.active,
         p_base_ms: tc.base_ms, p_inc_ms: tc.inc_ms, p_delay_ms: tc.delay_ms, p_tl_delay_ms: tc.tl_delay_ms,
         p_color: color(body.color), p_rated: body.rated === true,
+        // A challenge to a player (sent only then, so that other seeks never depend on it).
+        ...(typeof body.to_user === 'string' && /^[0-9a-f-]{36}$/i.test(body.to_user) ? { p_to_user: body.to_user } : {}),
       });
     }
     case 'create_engine_game': {

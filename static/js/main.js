@@ -14,8 +14,10 @@ import { Editor } from './editor.js';
 import { Practice } from './practice.js';
 import { Tutorial } from './tutorial.js';
 import { initAccount, account } from './account.js';
-import { PlayerPage } from './player.js';
+import { PlayerPage, openProfileEditor } from './player.js';
 import { AdminPage, refreshAdminBadge } from './admin.js';
+import { initHeader } from './header.js';
+import { CommunityPage } from './community.js';
 import { Home } from './home.js';
 import { OnlineGame } from './online.js';
 import { Puzzles, PuzzleThemes } from './puzzles.js';
@@ -66,11 +68,36 @@ function route() {
   app.pages[name].activate(params);
 }
 
-function setTheme(t) {
+/** The saved theme: 'system' (the device's), 'light' or 'dark' (the default). */
+function themePref() {
+  let t = null;
+  try { t = localStorage.getItem('kairos.theme'); } catch (e) { /* private mode */ }
+  return ['system', 'light', 'dark'].includes(t) ? t : 'dark';
+}
+
+const lightQuery = matchMedia('(prefers-color-scheme: light)');
+
+/** Apply the theme preference `pref` (and save it). */
+function setTheme(pref) {
+  try { localStorage.setItem('kairos.theme', pref); } catch (e) { /* private mode */ }
+  applyTheme();
+}
+
+function applyTheme() {
+  const pref = themePref();
+  const t = pref === 'system' ? (lightQuery.matches ? 'light' : 'dark') : pref;
+  if (document.documentElement.dataset.theme === t) return;
   document.documentElement.dataset.theme = t;
-  try { localStorage.setItem('kairos.theme', t); } catch (e) { /* private mode */ }
   app.board.readColors();
   if (app.pages && app.pages.analysis) app.pages.analysis.renderGraph();
+}
+lightQuery.addEventListener('change', () => applyTheme());
+
+/** Board square colours: brown, blue or green (lichess's themes). */
+function setBoard(name) {
+  document.documentElement.dataset.board = name;
+  store('boardTheme', name);
+  app.board.readColors();
 }
 
 function bindKeys() {
@@ -124,7 +151,7 @@ function bindSettings() {
   squares.onchange = () => setNotation('omitSourceSquares', squares.checked);
   boards.onchange = () => setNotation('omitSourceBoards', boards.checked);
   window.addEventListener('notation-change', show);
-  $('#btn-settings').onclick = () => { show(); showPrefs(); $('#dlg-settings').showModal(); };
+  return () => { show(); showPrefs(); $('#dlg-settings').showModal(); };
 }
 
 /** The published build (version.json, written by scripts/build_pages.sh): its commit, as a link. */
@@ -159,7 +186,7 @@ function rulesPage() {
 async function main() {
   bindSiteNav();
   bindDialogDismiss();
-  sounds.init($('#btn-sound'));
+  sounds.init();
   app.board = new MultiverseView($('#board'));
   app.input = new MoveInput(app.board);
   app.board.onHover = (sq) => {
@@ -175,18 +202,8 @@ async function main() {
   $('#tool-flip').onclick = () => {
     app.board.setFlipped(!app.board.flipped);
   };
-  $('#btn-theme').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-  // Board square colours: brown, blue, green (lichess themes).
-  $('#btn-board-theme').onclick = () => {
-    const themes = ['brown', 'blue', 'green'];
-    const next = themes[(themes.indexOf(document.documentElement.dataset.board) + 1) % themes.length];
-    document.documentElement.dataset.board = next;
-    store('boardTheme', next);
-    app.board.readColors();
-    toast(`Board: ${next}`);
-  };
-  $('#btn-help').onclick = () => $('#dlg-help').showModal();
-  bindSettings();
+  initHeader({ themePref, setTheme, setBoard, openSettings: bindSettings(), openHelp: () => $('#dlg-help').showModal(),
+    editProfile: () => openProfileEditor() });
   bindKeys();
   showBuild();
   // The Analysis tab, clicked while already on Analysis, starts over with a new board too.
@@ -205,7 +222,7 @@ async function main() {
   account.onChange(() => refreshAdminBadge());
   setInterval(() => refreshAdminBadge(), 5 * 60 * 1000);
   app.server = await serverInfo();
-  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), tutorial: new Tutorial(app), player: new PlayerPage(app), admin: new AdminPage(app), home: new Home(app), game: new OnlineGame(app), puzzles: new Puzzles(app), puzzlethemes: new PuzzleThemes(app), rules: rulesPage() };
+  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), tutorial: new Tutorial(app), player: new PlayerPage(app), admin: new AdminPage(app), community: new CommunityPage(app), home: new Home(app), game: new OnlineGame(app), puzzles: new Puzzles(app), puzzlethemes: new PuzzleThemes(app), rules: rulesPage() };
   try {
     await app.pages.analysis.init();
     setRules(app.pages.analysis.rules);

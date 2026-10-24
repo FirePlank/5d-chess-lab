@@ -2,7 +2,8 @@
 // variant, time (timed with minutes, increment and the 5D per-timeline delay, or unlimited), side,
 // rated or casual against people (rated needs an account, a clock and a rated variant), and
 // against Kairos its strength and opening book. The last choices are remembered. Submitting
-// creates a lobby seek, a private challenge (and opens its page), or a game against Kairos.
+// creates a lobby seek, a private challenge (and opens its page), a challenge to a player (from
+// their profile; they see it in their header), or a game against Kairos.
 import { VariantPicker } from './variant-picker.js';
 import { edge, report } from './net.js';
 import { MINUTES, INCREMENTS, TL_DELAYS, PRESETS, tcLabel } from './tc.js';
@@ -93,13 +94,18 @@ export class GameSetup {
     $('#setup-rated').disabled = !!why;
     $('#setup-rated').checked = !why && this.o.rated !== false;
     $('#setup-rated-note').textContent = why || '';
-    $('#setup-submit').textContent = SUBMIT[this.mode] || SUBMIT.online;
+    $('#setup-submit').textContent = this.mode === 'challenge' ? `Challenge ${this.target.name}` : SUBMIT[this.mode] || SUBMIT.online;
+    $('#setup-title').textContent = this.mode === 'challenge' ? `Challenge ${this.target.name}` : 'Game options';
     $('#setup-submit').title = timed ? tcLabel(this.timeControl()) : 'Unlimited time';
   }
 
-  /** Open in `mode` (online | friend | computer), with `position` (5DUCI) offered as a custom start. */
-  open(mode, { position = null, onCreated = null } = {}) {
+  /**
+   * Open in `mode` (online | friend | computer | challenge, to `target` {user_id, name}), with
+   * `position` (5DUCI) offered as a custom start.
+   */
+  open(mode, { position = null, onCreated = null, target = null } = {}) {
     this.mode = mode;
+    this.target = target;
     this.onCreated = onCreated;
     if (position) {
       this.custom = position;
@@ -139,7 +145,8 @@ export class GameSetup {
         const build = this.app.build && this.app.build.engine ? this.app.build.engine.sha.slice(0, 7) : 'local';
         r = await edge('create_engine_game', { ...body, level: this.o.level, book: this.o.book !== false, version: build });
       } else {
-        r = await edge('create_seek', { ...body, private: this.mode === 'friend', rated: this.rated() });
+        r = await edge('create_seek', { ...body, private: this.mode !== 'online', rated: this.rated(),
+          to_user: this.mode === 'challenge' ? this.target.user_id : undefined });
       }
       this.dialog.close();
       if (this.onCreated) this.onCreated(this.mode, r);

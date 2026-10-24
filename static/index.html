@@ -13,6 +13,8 @@
   (() => {
     let t = null, b = null;
     try { t = localStorage.getItem('kairos.theme'); b = JSON.parse(localStorage.getItem('kairos.boardTheme')); } catch (e) {}
+    // "system": the device's choice (the header menu's Theme).
+    if (t === 'system') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     if (t !== 'light' && t !== 'dark') t = 'dark';
     document.documentElement.dataset.theme = t;
     document.documentElement.dataset.board = ['brown', 'blue', 'green'].includes(b) ? b : 'brown';
@@ -52,15 +54,25 @@
         <a href="#/games" data-route="games">Your games</a>
       </div>
     </div>
+    <div class="nav-group">
+      <button type="button" class="nav-top" aria-haspopup="true">Community<svg class="nav-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="nav-drop">
+        <a href="#/players" data-route="players">Players</a>
+        <a href="#/leaderboard" data-route="leaderboard">Leaderboard</a>
+      </div>
+    </div>
   </nav>
   <div class="site-actions">
-    <a class="admin-btn hidden" id="btn-admin" href="#/admin" title="Fair play">Fair play<span class="admin-count hidden" id="btn-admin-count"></span></a>
-    <button class="acct-btn" id="btn-account" type="button"><span>Sign in</span></button>
-    <button class="icon-btn" id="btn-sound" title="Mute sounds" aria-label="Sound effects" aria-pressed="true"><svg><use href="#i-sound"/></svg></button>
-    <button class="icon-btn" id="btn-board-theme" title="Board colours" aria-label="Board colours"><svg><use href="#i-palette"/></svg></button>
-    <button class="icon-btn" id="btn-settings" title="Settings" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
-    <button class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg><use href="#i-keyboard"/></svg></button>
-    <button class="icon-btn" id="btn-theme" title="Light / dark" aria-label="Toggle light or dark theme"><svg class="only-light"><use href="#i-moon"/></svg><svg class="only-dark"><use href="#i-sun"/></svg></button>
+    <a class="admin-btn hidden" id="btn-admin" href="#/admin" title="Fair play"><svg aria-hidden="true"><use href="#i-shield"/></svg><span class="admin-label">Fair play</span><span class="hdr-count hidden" id="btn-admin-count"></span></a>
+    <div class="hdr-menu hidden" id="hdr-challenges">
+      <button class="icon-btn" id="btn-challenges" type="button" title="Challenges" aria-haspopup="true" aria-expanded="false"><svg><use href="#i-swords"/></svg><span class="hdr-count hidden" id="btn-challenges-count"></span></button>
+      <div class="hdr-drop challenge-drop hidden" id="challenge-drop" role="menu"></div>
+    </div>
+    <div class="hdr-menu" id="hdr-account">
+      <button class="acct-btn" id="btn-account" type="button" aria-haspopup="true" aria-expanded="false"><span>Sign in</span></button>
+      <button class="icon-btn" id="btn-dasher" type="button" title="Settings" aria-label="Settings" aria-haspopup="true" aria-expanded="false"><svg><use href="#i-gear"/></svg></button>
+      <div class="hdr-drop dasher hidden" id="dasher" role="menu"></div>
+    </div>
   </div>
 </header>
 
@@ -176,12 +188,13 @@
         <h1 class="ticket-title" id="challenge-title">Challenge a friend</h1>
         <p class="ticket-props" id="challenge-props"></p>
         <div class="ticket-owner hidden" id="challenge-owner">
-          <p>Send this link to your friend to play:</p>
+          <p id="challenge-wait">Send this link to your friend to play:</p>
           <button class="copy-link" id="challenge-copy" type="button" title="Copy link"><svg aria-hidden="true"><use href="#i-copy"/></svg><span id="challenge-link"></span></button>
           <button class="btn" id="challenge-cancel" type="button">Cancel</button>
         </div>
         <div class="ticket-visitor hidden" id="challenge-visitor">
           <button class="btn primary" id="challenge-accept" type="button">Accept</button>
+          <p class="ticket-reason hidden" id="challenge-notyours"></p>
           <p class="ticket-reason hidden" id="challenge-ingame">You're already in a game. <a id="challenge-rejoin" href="#/">Rejoin game</a></p>
         </div>
       </div>
@@ -656,36 +669,103 @@
   </section>
   <!-- ============================== A player's profile (after lichess's): rating, results, games -->
   <section class="player-page hidden" id="player">
-    <div class="player-inner">
-      <p class="muted hidden" id="pl-missing">No such player.</p>
-      <div id="pl-main" class="hidden">
-        <header class="panel pl-head">
-          <div class="pl-who">
-            <h1><span id="pl-name"></span><span class="pl-badges" id="pl-badges"></span></h1>
-            <span class="muted" id="pl-since"></span>
-            <div id="pl-admin"></div>
+    <div class="pl-wrap">
+      <p class="muted pl-missing hidden" id="pl-missing">No such player.</p>
+      <div class="pl-layout hidden" id="pl-main">
+        <aside class="pl-side" id="pl-side" aria-label="Ratings"></aside>
+        <div class="pl-box">
+          <header class="pl-header">
+            <div class="pl-title">
+              <span class="pl-dot" id="pl-dot" title="Offline"></span>
+              <h1 id="pl-name"></h1>
+              <span class="pl-badges" id="pl-badges"></span>
+            </div>
+            <div class="pl-actions" id="pl-actions"></div>
+          </header>
+          <div class="pl-profile">
+            <section class="pl-chart-box hidden" id="pl-chart-box" aria-label="Rating history">
+              <div class="pl-chart-head">
+                <h2>Rating history</h2>
+                <div class="seg pl-range" id="pl-range" role="tablist">
+                  <button type="button" data-days="30">1M</button>
+                  <button type="button" data-days="90">3M</button>
+                  <button type="button" data-days="180">6M</button>
+                  <button type="button" data-days="ytd">YTD</button>
+                  <button type="button" data-days="365">1Y</button>
+                  <button type="button" data-days="all" class="on">All</button>
+                </div>
+              </div>
+              <div class="pl-chart" id="pl-chart"></div>
+            </section>
+            <section class="pl-new hidden" id="pl-new"></section>
+            <div class="pl-infos" id="pl-infos"></div>
           </div>
-          <div class="pl-rating"><span class="pl-rating-v" id="pl-rating"></span><span class="muted" id="pl-rd"></span></div>
-        </header>
-        <div class="pl-stats" id="pl-stats"></div>
-        <section class="panel pl-chart-box hidden" id="pl-chart-box">
-          <h2 class="panel-title">Rating</h2>
-          <div id="pl-chart"></div>
+          <nav class="pl-tabs" id="pl-tabs" role="tablist">
+            <button type="button" data-tab="activity" class="on" role="tab">Activity</button>
+            <button type="button" data-tab="people" role="tab"><span id="pl-n-people"></span> games</button>
+            <button type="button" data-tab="kairos" role="tab"><span id="pl-n-kairos"></span> against Kairos</button>
+          </nav>
+          <div class="pl-activity" id="pl-activity"></div>
+          <div class="pl-games hidden" id="pl-games">
+            <div class="pl-levels hidden" id="pl-levels"></div>
+            <div class="table-wrap">
+              <table class="games pl-table">
+                <thead><tr><th>Date</th><th>Opponent</th><th class="center">Result</th><th>Rating</th><th>Ending</th><th class="num">Actions</th><th>Variant</th><th>Time control</th></tr></thead>
+                <tbody id="pl-body"></tbody>
+              </table>
+            </div>
+            <p class="muted pl-empty hidden" id="pl-empty">No games yet.</p>
+            <button type="button" class="btn sm hidden" id="pl-more">More games</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- ============================== Community: every player, and the leaderboard (community.js) -->
+  <section class="player-page community hidden" id="community">
+    <div class="cm-wrap">
+      <header class="cm-head">
+        <h1 id="cm-title">Players</h1>
+        <nav class="seg cm-switch" aria-label="Community">
+          <a href="#/players" data-view="players">Players</a>
+          <a href="#/leaderboard" data-view="leaderboard">Leaderboard</a>
+        </nav>
+      </header>
+      <div id="cm-players">
+        <section class="cm-online" aria-label="Online now">
+          <h2>Online now <span class="cm-count" id="cm-online-count"></span></h2>
+          <div class="cm-online-list" id="cm-online"></div>
         </section>
-        <section class="panel pl-games">
-          <div class="seg pl-tabs" id="pl-tabs" role="tablist">
-            <button type="button" data-kind="people" class="on" role="tab">Games</button>
-            <button type="button" data-kind="kairos" role="tab">Against Kairos</button>
+        <section class="panel cm-all">
+          <div class="cm-tools">
+            <input type="search" class="input cm-search" id="cm-search" placeholder="Search players" aria-label="Search players" autocomplete="off">
+            <div class="seg cm-sort" id="cm-sort">
+              <button type="button" data-sort="active" class="on">Recently active</button>
+              <button type="button" data-sort="rating">Rating</button>
+              <button type="button" data-sort="games">Games</button>
+              <button type="button" data-sort="new">Newest</button>
+            </div>
           </div>
-          <div class="pl-levels hidden" id="pl-levels"></div>
           <div class="table-wrap">
-            <table class="games pl-table">
-              <thead><tr><th>Date</th><th>Opponent</th><th class="center">Result</th><th>Rating</th><th>Ending</th><th class="num">Actions</th><th>Variant</th><th>Time control</th></tr></thead>
-              <tbody id="pl-body"></tbody>
+            <table class="games cm-table">
+              <thead><tr><th>Player</th><th class="num">Rating</th><th class="num">Rated games</th><th>Active</th><th>Member since</th></tr></thead>
+              <tbody id="cm-body"></tbody>
             </table>
           </div>
-          <p class="muted pl-empty hidden" id="pl-empty">No games yet.</p>
-          <button type="button" class="btn sm hidden" id="pl-more">More games</button>
+          <p class="muted cm-empty hidden" id="cm-empty">No players found.</p>
+        </section>
+      </div>
+      <div id="cm-board" class="hidden">
+        <div class="cm-podium" id="cm-podium"></div>
+        <section class="panel">
+          <div class="table-wrap">
+            <table class="games cm-table cm-ranks">
+              <thead><tr><th class="num">#</th><th>Player</th><th class="num">Rating</th><th class="num">Last 12 games</th><th class="num">Rated games</th></tr></thead>
+              <tbody id="cm-ranks"></tbody>
+            </table>
+          </div>
+          <p class="muted cm-empty hidden" id="cm-ranks-empty">No rated games yet.</p>
+          <p class="muted cm-note">One rating for Standard and Turn Zero, Glicko-2 as on lichess. A rating ends in ? while it is provisional (deviation 110 or more).</p>
         </section>
       </div>
     </div>
@@ -854,7 +934,7 @@
 
 <dialog class="modal game-setup" id="dlg-game-setup">
   <form method="dialog" class="modal-body" id="setup-form">
-    <h2>Game options</h2>
+    <h2 id="setup-title">Game options</h2>
     <div class="field"><span>Variant</span><div class="variant-selector" id="setup-variant"></div></div>
     <div class="field">
       <span>Time control</span>
@@ -904,16 +984,37 @@
       <p class="muted acct-small">Playing as a guest still works: casual games, puzzles and everything else.</p>
       <p class="muted acct-small">By signing in you agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
     </div>
-    <div id="acct-in" class="hidden">
-      <h2 id="acct-in-name"></h2>
-      <p class="acct-in-rating"><span class="muted">Rating</span> <strong id="acct-in-rating"></strong></p>
-      <p class="muted" id="acct-in-games"></p>
-      <div class="acct-actions">
-        <a class="btn" id="acct-profile" href="#/">Your profile</a>
-        <button type="button" class="btn" id="acct-signout">Sign out</button>
-      </div>
-    </div>
     <div class="modal-actions"><button class="btn" value="cancel">Close</button></div>
+  </form>
+</dialog>
+
+<dialog class="modal profile-dialog" id="dlg-profile">
+  <form class="modal-body" id="pe-form">
+    <h2>Edit profile</h2>
+    <label class="pe-field">
+      <span>Name</span>
+      <input class="input" id="pe-name" maxlength="20" autocomplete="off" spellcheck="false" required>
+      <small class="muted" id="pe-name-note">3 to 20 letters, digits, _ or -. You can change it once every 30 days; your games show the new name.</small>
+    </label>
+    <label class="pe-field">
+      <span>Bio</span>
+      <textarea class="input" id="pe-bio" maxlength="400" rows="4" placeholder="A few words about you and your 5D chess"></textarea>
+      <small class="muted"><span id="pe-bio-count">0</span>/400</small>
+    </label>
+    <p class="error hidden" id="pe-error" role="alert"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="pe-cancel">Cancel</button>
+      <button type="submit" class="btn primary" id="pe-save">Save</button>
+    </div>
+    <details class="pe-danger">
+      <summary>Close account</summary>
+      <p>Your profile, rating, puzzle history and sign-in are deleted. Your finished games stay in the public record, played by "Anonymous". This can't be undone.</p>
+      <label class="pe-field">
+        <span>Type <b id="pe-close-name"></b> to confirm</span>
+        <input class="input" id="pe-close-confirm" autocomplete="off" spellcheck="false">
+      </label>
+      <button type="button" class="btn primary danger" id="pe-close" disabled>Close my account</button>
+    </details>
   </form>
 </dialog>
 
@@ -1079,6 +1180,17 @@
     <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6M16 16l4 4M19 21l2-2"/><path d="M9.5 6.5 13 3h3v3l-3.5 3.5"/><path d="m5 14 4 4M7 17l-3 3M3 19l2 2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2A6.5 6.5 0 0 1 21.5 20"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol>
   </defs>
 </svg>
 </body>
