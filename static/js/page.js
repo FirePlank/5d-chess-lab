@@ -24,14 +24,16 @@ function kairosPage(hash) {
   // #/puzzles/themes (and plain #/puzzles): the themes; #/puzzles?new=1: the next puzzle;
   // #/puzzles/<id>: that one.
   if (head === 'puzzles' && id && id !== 'themes') params.set('id', id);
-  const pages = ['home', 'puzzles', 'analysis', 'editor', 'games', 'rules', 'openings', 'practice'];
+  // #/tutorial: the lessons; #/tutorial/<lesson>: that lesson.
+  if (head === 'tutorial' && id) params.set('lesson', id);
+  const pages = ['home', 'puzzles', 'analysis', 'editor', 'games', 'rules', 'openings', 'practice', 'tutorial'];
   let name = pages.includes(head) ? head : head === 'game' && id ? 'game' : 'home';
   if (head === 'puzzles' && (id === 'themes' || (!id && !params.get('new')))) name = 'puzzlethemes';
   return { name, params };
 }
 
 /** Pages on the board workspace (the others are full-page sections). */
-const KAIROS_BOARD_PAGES = ['game', 'puzzles', 'analysis', 'play', 'editor', 'practice'];
+const KAIROS_BOARD_PAGES = ['game', 'puzzles', 'analysis', 'play', 'editor', 'practice', 'tutorial'];
 
 /** Show page `name`'s sections and mark its tab in the header. */
 function kairosShow(name) {
@@ -56,6 +58,8 @@ function kairosShow(name) {
   toggle('#side-editor', name !== 'editor');
   toggle('#side-practice', name !== 'practice');
   if (name !== 'practice') toggle('#practice-select', true);
+  toggle('#side-tutorial', name !== 'tutorial');
+  if (name !== 'tutorial') toggle('#tutorial-select', true);
   const ws = $('#workspace');
   if (ws) ws.classList.toggle('editing', name === 'editor');
 }

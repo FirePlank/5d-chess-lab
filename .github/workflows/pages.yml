@@ -109,6 +109,7 @@ jobs:
           node tests/strength.mjs
           node tests/sound.mjs
           node tests/navigation.mjs
+          node tests/tutorial.mjs
           node tests/pv.mjs
           node tests/openings.mjs
           node tests/records.mjs games/sprt/*.jsonl games/match/*.jsonl

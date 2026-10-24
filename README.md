@@ -1,6 +1,6 @@
 # 5D Chess Lab
 
-Online play, an analysis board, a board editor, checkmate practice and play against an engine
+Online play, a tutorial, an analysis board, a board editor, checkmate practice and play against an engine
 for [5D Chess With Multiverse Time Travel](https://en.wikipedia.org/wiki/5D_Chess_with_Multiverse_Time_Travel),
 in your browser: **<https://fireplank.github.io/5d-chess-lab/>**
 
@@ -20,6 +20,14 @@ an unofficial fan project, not affiliated with Thunkspace.
   spectators, and every finished game recorded (5dpgn with clocks). Against Kairos the engine
   runs in your browser and its clock waits while you are away. Players are anonymous: a random
   token in your browser is your identity.
+- **Tutorial** (Learn, `#/tutorial`; the home page offers it to first-time visitors, after
+  infinitechess.org's "New?" prompt): ten short lessons that teach 5D chess by doing, after
+  lichess.org/learn. Boards and time, travel and new timelines, the present, moving between
+  timelines and the void, active timelines, each piece through the four directions, check and
+  checkmate. Each step asks for one move, click or answer, with marks on the board; wrong moves
+  are explained and taken back, with hints that grow on repeated misses; stars per lesson are
+  kept in your browser. The lessons are data (`static/js/lessons.js`), and `tests/tutorial.mjs`
+  plays every step through the rules core.
 - **Checkmate practice** (Learn): the 5D game's practice positions against Kairos defending the
   king, with progress, badges, undo and restart; kept in your browser.
 - **Analysis**: paste or drop a game (5dpgn, 5DFEN, a 5DUCI `position … moves …` line, or

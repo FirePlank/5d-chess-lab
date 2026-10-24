@@ -16,6 +16,9 @@ const GAP_Y = 2.4;
 // The user's markers (5dcol's default author colour, purple).
 const MARK_ARROW = 'rgba(155, 89, 182, 0.72)';
 const MARK_SQUARE = 'rgba(155, 89, 182, 0.5)';
+// The tutorial's marks (see `drawLesson`): gold, and red for a place with no board (the void).
+const LESSON = [255, 190, 30];
+const LESSON_VOID = [231, 76, 60];
 // Boards that an action adds slide in (and boards an undo removes slide out) over this long.
 const ENTER_MS = 240;
 const LEAVE_MS = 180;
@@ -92,7 +95,7 @@ export class MultiverseView {
     this.anims = new Map(); // "l,v" -> {t0, dur, dy, off, alpha}: boards sliding in
     this.leaving = []; // {b, t0, dur, dy, off, alpha}: boards sliding out
     this.lastStep = 0;
-    this.overlay = { selected: null, targets: [], pv: [], hint: [], hover: null, readonly: false };
+    this.overlay = { selected: null, targets: [], pv: [], hint: [], hover: null, readonly: false, lesson: null };
     // Checks: timelines whose "!" badge was clicked (their checks are shown), the badges drawn
     // last frame (for clicks), and the badge under the pointer.
     this.revealed = new Set();
@@ -673,6 +676,8 @@ export class MultiverseView {
       this.tickBoards(now);
       this.dirty = true;
     }
+    // The tutorial's marks pulse.
+    if (this.overlay.lesson) this.dirty = true;
     if (this.dirty) {
       this.dirty = false;
       this.draw();
@@ -762,9 +767,11 @@ export class MultiverseView {
     }
     for (const [b, alpha, tl, phantom, off] of visible) this.drawBoard(b, alpha, s, tl, phantom, off);
     this.drawHighlights();
+    if (this.overlay.lesson) this.drawLesson(s, false);
     for (const [b, alpha, , , off] of visible) this.drawPieces(b, alpha, s, off);
     this.drawTargets();
     this.drawArrows(s);
+    if (this.overlay.lesson) this.drawLesson(s, true);
     if (this.editor) this.editor.drawWorld(ctx, s);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -913,6 +920,55 @@ export class MultiverseView {
       ctx.beginPath();
       ctx.arc(cx, cy, 0.43, 0, Math.PI * 2);
       ctx.stroke();
+    }
+  }
+
+  /**
+   * The tutorial's marks (`overlay.lesson`): `squares` lit (under the pieces), then `boards`
+   * ringed, `arrows` (gold), `threats` (red) and `voids`: places with no board, drawn as a dashed
+   * red outline with a cross. Boards and squares are {l, t, c[, x, y]}; arrows {from, to, c} as moves. All pulse.
+   */
+  drawLesson(s, top) {
+    const { ctx, bw, bh } = this;
+    const o = this.overlay.lesson;
+    const px1 = 1 / s;
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
+    const rgba = (c, a) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
+    if (!top) {
+      for (const q of o.squares || []) {
+        const vv = 2 * q.t + q.c;
+        if (!this.boards.has(`${q.l},${vv}`)) continue;
+        const [x0, y0] = this.squareRect(q.l, vv, q.x, q.y);
+        ctx.fillStyle = rgba(LESSON, 0.3 + 0.3 * pulse);
+        ctx.fillRect(x0, y0, 1, 1);
+      }
+      return;
+    }
+    for (const b of o.boards || []) {
+      const vv = 2 * b.t + b.c;
+      if (!this.boards.has(`${b.l},${vv}`)) continue;
+      const x0 = this.boardX(vv), y0 = this.boardTop(b.l, vv);
+      const pad = 0.42 + 0.14 * pulse;
+      ctx.strokeStyle = rgba(LESSON, 0.55 + 0.45 * pulse);
+      ctx.lineWidth = Math.max(0.14, 4 * px1);
+      ctx.strokeRect(x0 - pad, y0 - pad, bw + 2 * pad, bh + 2 * pad);
+    }
+    const width = Math.max(0.1, Math.min(0.18, 2.8 / s));
+    for (const a of o.arrows || []) this.arrow(a.from, a.to, a.c, rgba(LESSON, 0.6 + 0.35 * pulse), width);
+    for (const a of o.threats || []) this.arrow(a.from, a.to, a.c, rgba(LESSON_VOID, 0.6 + 0.35 * pulse), width);
+    for (const b of o.voids || []) {
+      const x0 = this.boardX(2 * b.t + b.c), y0 = this.boardY(b.l);
+      ctx.save();
+      ctx.strokeStyle = rgba(LESSON_VOID, 0.55 + 0.45 * pulse);
+      ctx.lineWidth = Math.max(0.1, 3 * px1);
+      ctx.setLineDash([0.4, 0.3]);
+      ctx.strokeRect(x0, y0, bw, bh);
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(x0 + bw * 0.3, y0 + bh * 0.3); ctx.lineTo(x0 + bw * 0.7, y0 + bh * 0.7);
+      ctx.moveTo(x0 + bw * 0.7, y0 + bh * 0.3); ctx.lineTo(x0 + bw * 0.3, y0 + bh * 0.7);
+      ctx.stroke();
+      ctx.restore();
     }
   }
 

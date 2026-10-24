@@ -19,6 +19,8 @@ export class MoveInput {
     // and puzzles, where, as in the Steam game, every action waits for Submit. Remembered per
     // page.
     this.autoSubmitBy = { analysis: true, play: false, puzzle: false, ...(store('autoSubmitBy') || {}) };
+    // The tutorial always waits for Submit: it teaches the habit.
+    this.autoSubmitBy.tutorial = false;
     this.peek = false;
     board.onSquare = (sq) => this.click(sq);
     // A right-click with a piece selected only deselects it (as 5dcol); otherwise it draws.
@@ -28,6 +30,7 @@ export class MoveInput {
       return true;
     };
     $('#tool-autosubmit').onclick = () => {
+      if (this.mode === 'tutorial') return toast('The tutorial always waits for Submit (F or Enter), as games do');
       this.autoSubmitBy[this.mode] = !this.autoSubmit;
       store('autoSubmitBy', this.autoSubmitBy);
       this.showAutoSubmit();
@@ -108,6 +111,8 @@ export class MoveInput {
   click(sq) {
     const s = this.source;
     if (!s) return;
+    // A source may take the click itself (the tutorial's "click a board" steps).
+    if (s.onClick && s.onClick(sq)) return this.deselect();
     if (!sq) return this.deselect();
     const canMove = s.canMove();
     if (this.selected && !this.peek && canMove) {
@@ -225,6 +230,8 @@ export class MoveInput {
       toast(e.message, { error: true });
       return;
     }
+    // A source may turn a legal move down (the tutorial, when a step asks for another one).
+    if (s.onMove && s.onMove(mv, this.draft) === false) return this.deselect();
     this.draft.push(mv);
     this.deselect();
     // Playing a move clears the user's marks (as lichess).

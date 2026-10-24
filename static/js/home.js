@@ -23,6 +23,23 @@ const IDLE_MS = 30 * 60 * 1000;
 const HOLD_MS = 7000;
 const MAX_FEATURED = 3;
 
+/** localStorage key of the dismissed "New?" prompt; index.html's head script reads it too. */
+const PROMPT_KEY = 'kairos.homePromptDismissed';
+
+/**
+ * The "New?" prompt above the lobby (after infinitechess.org's): "Take the tutorial" or "I'm
+ * experienced". Either one hides it for good; on later visits the document's head script marks
+ * <html data-home-prompt="dismissed"> before first paint, so it never flashes.
+ */
+function newPlayerPrompt() {
+  const dismissed = () => { try { localStorage.setItem(PROMPT_KEY, '1'); } catch (e) { /* private mode */ } };
+  $('#new-prompt-dismiss').onclick = () => {
+    dismissed();
+    $('#new-prompt').classList.add('collapsed');
+  };
+  $('#new-prompt-tutorial').addEventListener('click', dismissed);
+}
+
 export class Home {
   constructor(app) {
     this.app = app;
@@ -36,6 +53,7 @@ export class Home {
   }
 
   async init() {
+    newPlayerPrompt();
     this.rules = await Rules.create();
     this.variants = this.rules.call({ cmd: 'variants' }).variants;
     this.setup = new GameSetup(this.app, this.variants);

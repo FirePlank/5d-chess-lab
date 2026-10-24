@@ -18,6 +18,8 @@
     document.documentElement.dataset.board = ['brown', 'blue', 'green'].includes(b) ? b : 'brown';
     // The app area stays hidden until the page the address names is shown (below <main>).
     document.documentElement.dataset.boot = '';
+    // The home page's "New?" prompt, once dismissed (see home.js's newPlayerPrompt).
+    try { if (localStorage.getItem('kairos.homePromptDismissed') === '1') document.documentElement.dataset.homePrompt = 'dismissed'; } catch (e) {}
   })();
 </script>
 <script src="js/page.js"></script>
@@ -37,6 +39,7 @@
     <div class="nav-group">
       <button type="button" class="nav-top" aria-haspopup="true">Learn<svg class="nav-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <div class="nav-drop">
+        <a href="#/tutorial" data-route="tutorial">Tutorial</a>
         <a href="#/practice" data-route="practice">Checkmate practice</a>
         <a href="#/openings" data-route="openings">Openings</a>
         <a href="#/rules" data-route="rules">Rules</a>
@@ -70,6 +73,14 @@
         <h1 class="hero-title"><span class="hero-5d">5D</span> Chess Lab</h1>
         <p class="hero-tag" id="hero-tag">Chess with multiverse time travel</p>
       </header>
+      <!-- New players (after infinitechess.org's): hidden for good once either button is used. -->
+      <section class="new-prompt" id="new-prompt" aria-label="New to 5D chess?">
+        <span class="new-prompt-label">New?</span>
+        <div class="new-prompt-actions">
+          <a class="new-prompt-btn primary" id="new-prompt-tutorial" href="#/tutorial">Take the tutorial</a>
+          <button class="new-prompt-btn" id="new-prompt-dismiss" type="button">I'm experienced</button>
+        </div>
+      </section>
       <div class="lobby-layout">
         <div class="lobby-actions">
           <button class="lobby-btn primary" id="btn-create-game" type="button"><svg aria-hidden="true"><use href="#i-globe"/></svg><span>Create online game</span></button>
@@ -198,6 +209,21 @@
           </div>
         </header>
         <div id="practice-groups"></div>
+      </div>
+    </section>
+    <!-- Tutorial: the lessons, over the board until one is chosen. -->
+    <section class="practice-select hidden" id="tutorial-select" aria-label="Tutorial">
+      <div class="practice-content">
+        <header class="practice-header">
+          <h1 class="practice-title-main">Learn 5D chess</h1>
+          <p class="muted practice-intro">Ten short lessons of a few minutes each. You learn by playing: every step asks for one move, one click or one answer.</p>
+          <div class="panel progress-panel">
+            <div class="progress-row"><span class="progress-label">Progress</span><span class="progress-count" id="tut-progress-count"></span></div>
+            <div class="progress-track tut-track"><div class="progress-fill" id="tut-progress-fill"></div></div>
+          </div>
+        </header>
+        <div class="tut-lessons" id="tut-lessons"></div>
+        <p class="muted tut-chess-note">New to chess itself? Learn how the pieces move on one board first, at <a href="https://lichess.org/learn" target="_blank" rel="noopener">lichess.org/learn</a>.</p>
       </div>
     </section>
     <!-- Puzzles: nothing to solve (none left in the theme and range, or the server is away). -->
@@ -390,6 +416,41 @@
           </div>
           <div class="player-bar" id="practice-bottom"><span class="pname" id="practice-bottom-name">You</span></div>
         </div>
+      </div>
+
+      <!-- Tutorial: the lesson, its steps, the coach's message and what to do. -->
+      <div class="side-view hidden" id="side-tutorial">
+        <div class="panel tut-panel">
+          <div class="tut-head">
+            <a class="pz-back" href="#/tutorial" title="All lessons"><svg aria-hidden="true"><use href="#i-prev"/></svg><span>Lessons</span></a>
+            <span class="muted tut-count" id="tut-count"></span>
+          </div>
+          <h2 class="tut-title" id="tut-title"></h2>
+          <div class="tut-dots" id="tut-dots" aria-hidden="true"></div>
+          <div class="tut-coach" id="tut-coach" aria-live="polite">
+            <span class="tut-task hidden" id="tut-task"></span>
+            <p class="tut-say" id="tut-say"></p>
+            <div class="tut-options hidden" id="tut-options"></div>
+            <div class="tut-feedback hidden" id="tut-feedback"></div>
+            <div class="tut-actions">
+              <button type="button" class="ctrl-text hidden" id="tut-hint" title="Show the piece to move, then the move (costs a star)"><svg aria-hidden="true"><use href="#i-search"/></svg>Hint</button>
+              <button type="button" class="ctrl-text hidden" id="tut-retry" title="Start this step again"><svg aria-hidden="true"><use href="#i-undo"/></svg>Restart step</button>
+            </div>
+            <button type="button" class="btn primary block hidden" id="tut-next">Continue</button>
+          </div>
+          <div class="tut-done hidden" id="tut-done"></div>
+        </div>
+        <details class="panel tut-key">
+          <summary>Board key</summary>
+          <ul>
+            <li><b>Light / dark frame:</b> White / Black to move on that board.</li>
+            <li><b>Blue outline:</b> a board you can move on (dashed: optional).</li>
+            <li><b>Shaded column:</b> the present.</li>
+            <li><b>Faded boards:</b> an inactive timeline.</li>
+            <li><b>Labels:</b> turns (T) along the top, timelines (L) down the left.</li>
+            <li><b>Arrows:</b> the last action; jumps between boards curve.</li>
+          </ul>
+        </details>
       </div>
 
       <!-- Puzzles (lichess's trainer): the theme, the puzzle, what to do, the moves, the session. -->
@@ -593,6 +654,7 @@
     <article class="rules-doc">
       <h1>Rules</h1>
       <p class="lead">The rules Kairos plays by: 5D Chess With Multiverse Time Travel, with the community tournament standard for stalemate (exiled kings).</p>
+      <p>New to 5D chess? The <a href="#/tutorial">tutorial</a> teaches it by playing, in ten short lessons.</p>
       <nav class="rules-toc" aria-label="On this page">
         <a href="#/rules" data-sec="game">The game</a>
         <a href="#/rules" data-sec="turns">Turns</a>

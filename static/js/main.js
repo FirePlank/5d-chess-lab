@@ -12,6 +12,7 @@ import { Openings } from './openings.js';
 import { Games } from './games.js';
 import { Editor } from './editor.js';
 import { Practice } from './practice.js';
+import { Tutorial } from './tutorial.js';
 import { Home } from './home.js';
 import { OnlineGame } from './online.js';
 import { Puzzles, PuzzleThemes } from './puzzles.js';
@@ -71,7 +72,7 @@ function setTheme(t) {
 
 function bindKeys() {
   bindCameraKeys(app.board, () => ['analysis', 'play'].includes(app.route)
-    || app.route === 'practice' || app.route === 'game' || app.route === 'puzzles' || (app.route === 'editor' && app.pages.editor.tool === 'move'));
+    || app.route === 'practice' || app.route === 'tutorial' || app.route === 'game' || app.route === 'puzzles' || (app.route === 'editor' && app.pages.editor.tool === 'move'));
   document.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.target.closest('input, textarea, select, dialog, [contenteditable]') || document.querySelector('dialog[open]') || e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key;
@@ -195,7 +196,7 @@ async function main() {
   });
 
   app.server = await serverInfo();
-  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), home: new Home(app), game: new OnlineGame(app), puzzles: new Puzzles(app), puzzlethemes: new PuzzleThemes(app), rules: rulesPage() };
+  app.pages = { analysis: new Analysis(app), play: new Play(app), editor: new Editor(app), games: new Games(app), openings: new Openings(app), practice: new Practice(app), tutorial: new Tutorial(app), home: new Home(app), game: new OnlineGame(app), puzzles: new Puzzles(app), puzzlethemes: new PuzzleThemes(app), rules: rulesPage() };
   try {
     await app.pages.analysis.init();
     setRules(app.pages.analysis.rules);
@@ -208,6 +209,7 @@ async function main() {
   app.pages.games.init();
   app.pages.editor.init();
   await app.pages.practice.init();
+  await app.pages.tutorial.init();
   await app.pages.puzzles.init();
   app.pages.puzzlethemes.init();
   await app.pages.home.init();

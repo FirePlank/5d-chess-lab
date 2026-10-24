@@ -1212,3 +1212,92 @@ a.btn, a.ctrl-text { text-decoration: none; }
 
 /* An online game's panel while it loads (it still shows the game before). */
 #side-game.loading > * { visibility: hidden; }
+
+/* ------------------------------------------------------------ new-player prompt */
+/* "New? Take the tutorial / I'm experienced" above the lobby, as infinitechess.org's: it folds
+   away when dismissed, and returning visitors never see it (the head script marks <html>). */
+.new-prompt {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .75em 1em;
+  padding: .75em 1em; margin: -16px 0 20px; font-size: 15px; color: var(--strong); max-height: 200px;
+  transition: max-height .35s ease, padding .35s ease, margin .35s ease, opacity .25s ease;
+}
+.new-prompt-label { font-size: 1.2em; font-weight: 700; letter-spacing: .02em; }
+.new-prompt-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .5em; }
+.new-prompt-btn {
+  display: inline-flex; justify-content: center; padding: .5em 1em; border-radius: .4em; font: inherit; font-weight: 600;
+  color: var(--strong); background: var(--inset); border: 1px solid var(--border); text-decoration: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.new-prompt-btn:hover { background: var(--panel); text-decoration: none; }
+.new-prompt-btn.primary { color: #fff; background: color-mix(in srgb, rgb(255 88 0) 70%, transparent); border-color: transparent; }
+.new-prompt-btn.primary:hover { background: rgb(255 108 20 / 85%); }
+.new-prompt.collapsed { max-height: 0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; opacity: 0; pointer-events: none; overflow: hidden; }
+html[data-home-prompt="dismissed"] .new-prompt { display: none; }
+
+/* ------------------------------------------------------------ tutorial */
+/* The lesson list (over the board, as checkmate practice's), then a lesson: its steps as dots,
+   the coach's message, answers, feedback, and the lesson's end with its stars and recap. */
+.tut-lessons { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.tut-lesson {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 10px; text-align: left;
+  background: var(--panel); border: 1px solid var(--border); color: var(--text); cursor: pointer;
+  transition: border-color .15s, transform .15s;
+}
+.tut-lesson:hover { border-color: var(--accent); transform: translateY(-1px); }
+.tut-lesson.next { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.tut-lesson-num {
+  display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--inset); color: var(--strong); font-weight: 700;
+}
+.tut-lesson.done .tut-lesson-num { background: var(--good); color: #fff; }
+.tut-lesson-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.tut-lesson-body strong { color: var(--strong); font-size: 15px; }
+.tut-lesson-body .muted { font-size: 13px; }
+.tut-chess-note { margin: 0; font-size: 13px; }
+.tut-stars { display: inline-flex; gap: 2px; flex: none; }
+.tut-star { width: 16px; height: 16px; fill: var(--inset); stroke: var(--border); stroke-width: 1; }
+.tut-star.on { fill: #f5b301; stroke: #c98f00; }
+.tut-stars.big .tut-star { width: 28px; height: 28px; }
+
+.tut-panel { display: flex; flex-direction: column; gap: 10px; padding: var(--s2) var(--s3) var(--s3); }
+.tut-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tut-head .pz-back { padding-left: 0; }
+.tut-count { font-size: 12px; }
+.tut-title { margin: 0; font-size: 19px; color: var(--strong); }
+.tut-dots { display: flex; gap: 6px; }
+.tut-dot { flex: 1; height: 5px; border-radius: 3px; background: var(--inset); }
+.tut-dot.cur { background: var(--accent); }
+.tut-dot.done { background: var(--good); }
+.tut-coach { display: flex; flex-direction: column; gap: 10px; }
+.tut-task { align-self: flex-start; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-text, var(--accent)); }
+.tut-say { margin: 0; font-size: 16px; line-height: 1.5; color: var(--strong); }
+.tut-say b, .tut-feedback b { color: var(--strong); }
+.tut-options { display: flex; flex-direction: column; gap: 8px; }
+.tut-option {
+  padding: 10px 12px; border-radius: var(--r); border: 1px solid var(--border); background: var(--inset);
+  color: var(--strong); font-size: 14px; text-align: left; cursor: pointer;
+}
+.tut-option:hover:not(:disabled) { border-color: var(--accent); }
+.tut-option:disabled { cursor: default; opacity: .7; }
+.tut-option.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 22%, var(--inset)); opacity: 1; }
+.tut-option.wrong { border-color: #c33; background: color-mix(in srgb, #c33 18%, var(--inset)); }
+.tut-option.picked { border-color: var(--muted); opacity: 1; }
+.tut-feedback { padding: 10px 12px; border-radius: var(--r); font-size: 14px; line-height: 1.5; color: var(--text); background: var(--inset); border-left: 3px solid var(--border); }
+.tut-feedback.good { border-left-color: var(--good); }
+.tut-feedback.good strong { color: var(--good); }
+.tut-feedback.bad { border-left-color: #c33; animation: tut-shake .3s; }
+.tut-feedback.hint, .tut-feedback.nudge { border-left-color: var(--accent); }
+@keyframes tut-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.tut-actions { display: flex; gap: 4px; }
+.tut-actions .ctrl-text { flex: 0 0 auto; padding: 0 8px; height: 30px; }
+.tut-done { display: flex; flex-direction: column; gap: 10px; }
+.tut-done-head { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0 4px; text-align: center; }
+.tut-done-head strong { font-size: 18px; color: var(--strong); }
+.tut-recap { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
+.tut-grad { display: flex; flex-direction: column; gap: 8px; }
+.tut-grad p { margin: 4px 0 0; font-size: 13px; }
+#draft-submit.tut-pulse:not(:disabled) { animation: tut-pulse 1.2s ease-in-out infinite; }
+@keyframes tut-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
+.tut-key { padding: var(--s2) var(--s3); font-size: 13px; }
+.tut-key summary { cursor: pointer; font-weight: 600; color: var(--strong); }
+.tut-key ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; line-height: 1.4; }
