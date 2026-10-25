@@ -1043,14 +1043,14 @@ export class MultiverseView {
 
   /**
    * The timelines whose "!" badge stands for check `ch`: the attacker's and the royal's, each
-   * only if its latest board is the side to move's (not moving there is what lets the check
-   * happen, as 5dcol's pass warnings).
+   * only if the side to move must play it this turn (not moving there is what lets the check
+   * happen, as 5dcol's pass warnings). A timeline ahead of the present, which it needn't play,
+   * gets none: moving there can't stop a check (say on its king's past self on that timeline).
    */
   checkLines(ch) {
-    const v = this.view;
     return [...new Set([ch.from[0], ch.to[0]])].filter((l) => {
       const tl = this.timelines.get(l);
-      return tl && tl.end[1] === v.player;
+      return tl && tl.status === 'mandatory';
     });
   }
 
