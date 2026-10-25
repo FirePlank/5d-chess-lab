@@ -20,6 +20,7 @@ import { initHeader } from './header.js';
 import { CommunityPage } from './community.js';
 import { Home } from './home.js';
 import { OnlineGame } from './online.js';
+import { reportCrash } from './crash.js';
 import { Puzzles, PuzzleThemes } from './puzzles.js';
 import { setRules } from './static-api.js';
 import { moveText, notationSettings, setNotation } from './notation.js';
@@ -41,6 +42,7 @@ const app = {
   engine: new Engine(engineSettings()),
   server: null,
 };
+app.engine.on((m) => { if (m.type === 'crash') reportCrash(m); });
 
 async function serverInfo() {
   try {

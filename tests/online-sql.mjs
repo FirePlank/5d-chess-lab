@@ -254,6 +254,15 @@ assert.match((await one('select record from public.games where id = $1', [e.id])
 r = await call('game_rematch', { p_token: C, p_tab: 'tabC1', p_id: e.id });
 assert.ok(r.id, 'a rematch against Kairos starts at once');
 assert.equal((await game(r.id)).engine_color, 1);
+// Kairos's search fails in the player's browser after both sides moved: the game is aborted, not
+// won by the player (game zVqatR).
+await call('game_open', { p_token: C, p_tab: 'tabC1', p_id: r.id });
+await move(C, 'tabC1', r.id, 0, 2);
+await move(C, 'tabC1', r.id, 1, 1);
+await call('engine_resign', { p_token: C, p_id: r.id });
+g = await game(r.id);
+assert.equal(g.result, '*');
+assert.equal(g.termination, 'aborted');
 
 // ---------------------------------------------------------------- a private challenge with chat
 await flood();

@@ -14,6 +14,7 @@ import { sb, rpc, edge, pid, tab, live, setPresence, serverNow, syncClock, onCon
 import { tcLabel, tcText, speed, clockText } from './tc.js';
 import { account, ratingText, profileHref, refreshAccount } from './account.js';
 import * as fairplay from './fairplay.js';
+import { reportCrash } from './crash.js';
 import { $, el, toast, onWindow } from './util.js';
 
 /** An action block that appears ignores clicks this long (one meant for the block it replaced). */
@@ -22,6 +23,8 @@ const GRACE_MS = 667;
 const CONFIRM_MS = 3000;
 /** Kairos's think time per action in a game without a clock. */
 const UNTIMED_MOVETIME = 3000;
+/** Kairos's search is tried this many times (the engine restarted between) before the game is aborted. */
+const ENGINE_TRIES = 3;
 
 const NOTICES = {
   'draw-offered': ['You offered a draw.', 'Opponent offered a draw.'],
@@ -158,6 +161,7 @@ export class OnlineGame {
   async open(id) {
     this.reset();
     this.id = id;
+    this.engineTries = 0;
     // Nothing is shown until the game is drawn from our side: the board still holds the page
     // shown before (as infinitechess.org keeps its canvas hidden until the game has loaded).
     this.loading(true);
@@ -609,18 +613,35 @@ export class OnlineGame {
     const ply = this.searchFor;
     this.searchId = null;
     if (!r || !this.live() || r.ply !== ply) return;
-    if (!m.bestmove) {
-      // No action: Kairos gives up (resigns; aborts before both sides moved).
-      rpc('engine_resign', { p_id: this.id }).catch(report);
-      return;
-    }
+    // No action in a game still on (the server ends it at mate or stalemate): the search failed.
+    if (!m.bestmove) return this.engineFailed(new Error('Kairos’s search returned no action'));
+    this.engineTries = 0;
     await this.send(ply, m.bestmove);
   }
 
+  /**
+   * Kairos's search failed in this browser: restart the engine and search again; after
+   * ENGINE_TRIES failures the game is aborted (never a win for either side: game zVqatR was
+   * given to the player as Kairos's resignation).
+   */
   engineFailed(e) {
     if (!this.live() || !this.row.engine_color) return;
-    toast('The engine failed to load and has resigned the game.', { error: true });
     console.error(e);
+    this.searchId = null;
+    this.engineTries = (this.engineTries || 0) + 1;
+    if (this.engineTries < ENGINE_TRIES) {
+      const ply = this.row.ply;
+      this.engine.restart();
+      setTimeout(() => {
+        if (this.searchFor !== ply || this.searchId != null) return;
+        this.searchFor = null;
+        this.maybeThink();
+      }, 1000 * this.engineTries);
+      return;
+    }
+    reportCrash({ message: e.message, stage: `online game, ${ENGINE_TRIES} tries`, game: this.id, ply: this.row.ply,
+      position: this.engine.lastPosition });
+    toast(`The engine could not run in this browser (${e.message}), so the game was aborted.`, { error: true });
     rpc('engine_resign', { p_id: this.id }).catch(report);
   }
 

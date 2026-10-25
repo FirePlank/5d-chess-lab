@@ -1,0 +1,33 @@
+# Engine crash reports: posts the crashes browsers reported (scripts/crash-report.mjs) to the
+# admins' Discord channel. Started only by the database (private.crash_dispatch, on a new report)
+# or by hand.
+#
+# The logs of this repository's runs are public, so nothing here prints anything.
+name: Crash report
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crash-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Post the waiting reports
+        env:
+          FAIRPLAY_KEY: ${{ secrets.FAIRPLAY_KEY }}
+          FAIRPLAY_DISCORD_WEBHOOK: ${{ secrets.FAIRPLAY_DISCORD_WEBHOOK }}
+        run: node scripts/crash-report.mjs > /dev/null 2>&1

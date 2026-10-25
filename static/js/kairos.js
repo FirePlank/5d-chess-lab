@@ -109,6 +109,12 @@ export class Engine {
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   emit(ev) { for (const fn of this.listeners) fn(ev); }
 
+  /** The engine failed (not a refusal): a 'crash' event for the crash report (main.js). */
+  crashed(message, stage) {
+    this.emit({ type: 'crash', message: String(message || 'unknown'), stage, position: this.lastPosition || null,
+      threads: this.threadsActive, hashMb: this.hashMb, shared: this.shared });
+  }
+
   /** New thread count and hash size; the worker restarts on the next search. */
   configure({ threads, hashMb }) {
     if (threads === this.threads && hashMb === this.hashMb) return;
@@ -134,13 +140,17 @@ export class Engine {
       });
       this.threadsActive = threads;
       this.worker.onmessage = (e) => this.onMessage(e.data);
-      this.worker.onerror = (e) => this.emit({ type: 'error', message: e.message || 'engine worker error', fatal: true });
+      this.worker.onerror = (e) => {
+        this.crashed(e.message || 'engine worker error', 'worker');
+        this.emit({ type: 'error', message: e.message || 'engine worker error', fatal: true });
+      };
       this.emit({ type: 'ready', threads });
     })();
     try {
       await this.ready;
     } catch (e) {
       this.restart();
+      this.crashed(e && e.message, 'start');
       throw e;
     }
     return this.ready;
@@ -150,6 +160,7 @@ export class Engine {
     if (m.id !== undefined && m.id !== this.reqId) return; // a stale search
     if (m.type === 'done' || m.type === 'error') this.busy = false;
     if (m.type === 'error' && m.fatal) this.restart();
+    if (m.type === 'error' && m.fatal) this.crashed(m.message, 'search');
     this.emit(m);
   }
 
@@ -182,6 +193,7 @@ export class Engine {
     }
     this.busy = true;
     this.runningId = id;
+    this.lastPosition = position;
     this.worker.postMessage({ type: 'search', id, position, movetime, depth, newGame, resume, timeLeft, increment, delay, delayPerTimeline, book, multiPV, skillLevel });
     return id;
   }

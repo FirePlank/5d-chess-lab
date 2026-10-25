@@ -218,4 +218,20 @@ await q(`update public.games set ended_at = now() - interval '1 hour'`);
 await q('delete from private.fairplay_runs');
 await one('select private.fairplay_dispatch()');
 assert.equal((await q(`select * from net.sent where url like 'https://api.github.com/%'`)).length, 1, 'no run when no game ended lately');
-console.log('fairplay-sql: admins, guest history, signals, detector queue and evidence, cases, dismiss and ban, analysis matches and the dispatcher passed');
+
+// Engine crash reports: kept, posted by one workflow run at a time, taken once by the detector's key.
+const crash = (m, fp = 'e'.repeat(32)) => call('engine_crash_report', { p_message: m, p_context: { stage: 'start' }, p_fp: fp });
+await crash('RuntimeError: unreachable');
+await crash('RuntimeError: unreachable again');
+const runs = () => q(`select * from net.sent where url like '%crash-report.yml%'`);
+assert.equal((await runs()).length, 1, 'a crash starts one report run, not one per crash');
+for (let i = 0; i < 5; i++) await crash(`more ${i}`);
+assert.equal((await q('select * from private.engine_crashes')).length, 5, 'at most 5 an hour from a browser');
+await crash('another browser', 'f'.repeat(32));
+await fails(call('engine_crashes_take', { p_key: 'wrong' }), /not the detector/);
+const taken = await call('engine_crashes_take', { p_key: KEY });
+assert.equal(taken.length, 6);
+assert.equal(taken[0].message, 'RuntimeError: unreachable');
+assert.equal(taken[0].context.stage, 'start');
+assert.deepEqual(await call('engine_crashes_take', { p_key: KEY }), [], 'each report is taken once');
+console.log('fairplay-sql: admins, guest history, signals, detector queue and evidence, cases, dismiss and ban, analysis matches, the dispatcher and crash reports passed');

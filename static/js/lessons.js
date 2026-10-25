@@ -71,6 +71,9 @@ const FAIRY_DRAGON = q4('D');
 const FAIRY_ROYAL = small('1k3/5/2Y2/5/2r2:0:1:w');
 const FAIRY_COMMON = small('4k/5/2C2/K4/2r2:0:1:w');
 const FAIRY_BRAWN = small('4k/5/3n1/5/K4:-1:1:w', '4k/5/2W2/5/K4:0:1:w');
+// A brawn on c3 and a knight on c4 on turn 1; on turn 2 the brawn can take the knight's past self:
+// one rank forward and one turn back.
+const FAIRY_BRAWN_TIME = small('4k/2n2/2W2/5/K4:0:1:w', '4k/2n2/2W2/5/1K3:0:1:b', '3k1/2n2/2W2/5/1K3:0:2:w');
 
 /** Goals: each judges a submitted action ({moves, before, after}): true, or why not. */
 export const goals = {
@@ -709,19 +712,20 @@ export const LESSONS = [
 
   // ------------------------------------------------------------------ advanced
   {
-    id: 'fairy', title: 'Fairy pieces', blurb: 'Princess, unicorn and dragon.', piece: 'unicorn', category: 'advanced',
+    id: 'fairy', title: 'Fairy pieces', blurb: 'Princess, unicorn, dragon and brawn.', piece: 'unicorn', category: 'advanced',
     recap: [
-      'Princess: moves like a rook or a bishop (one or two dimensions).',
+      'Princess: a queen that can’t move along three or four dimensions at once: only rook and bishop moves.',
       'Unicorn: exactly three dimensions at once, the same distance in each.',
       'Dragon: exactly four dimensions at once. Neither can move on a single board.',
+      'Brawn: a pawn that also captures one step along any two dimensions, as long as its steps in rank and timeline are forward (at least one of them).',
     ],
     steps: [
       {
         type: 'play', at: [FAIRY_PRINCESS],
-        say: 'Some variants add fairy pieces. A **princess** moves like a rook or a bishop. Capture the knight, one file right and one turn back.',
+        say: 'Some variants add fairy pieces. A **princess** is a queen that can’t move along three or four dimensions at once. Capture the knight: one file right, one turn back.',
         solution: '(0T3)c3(0T2)d3',
         wrong: 'One file right, one turn back: a bishop-like move.',
-        ok: 'Rook or bishop moves: a queen without its three- and four-dimension moves.',
+        ok: 'A queen could also go along three or four dimensions at once; a princess never can.',
       },
       {
         type: 'play', at: [FAIRY_UNICORN],
@@ -742,14 +746,27 @@ export const LESSONS = [
         options: ['Yes', 'No'], answer: 1,
         ok: 'A move on one board changes only file and rank: two dimensions. Both need more.',
       },
+      {
+        type: 'play', at: [FAIRY_BRAWN],
+        say: 'A **brawn** is a pawn that captures one step along any two dimensions, if its rank and timeline steps go forward. Capture: one timeline up, one file right.',
+        solution: '(0T1)c3(-1T1)d3',
+        wrong: 'One timeline up, one file right.',
+        ok: 'A pawn couldn’t: across timelines it captures only with a step forward and one sideways in time.',
+      },
+      {
+        type: 'play', at: [FAIRY_BRAWN_TIME],
+        say: 'Back in time is fine too, while the rank step goes forward. Capture the knight’s past self: one rank forward and one turn back.',
+        solution: '(0T2)c3(0T1)c4',
+        wrong: 'One rank forward, one turn back: the knight on c4 on turn 1.',
+        ok: 'Forward in rank, back in time: every rank or timeline step a brawn takes is forward.',
+      },
     ],
   },
   {
-    id: 'fairy2', title: 'Royals and brawns', blurb: 'Royal queen, common king and brawn.', piece: 'royalqueen', category: 'advanced',
+    id: 'fairy2', title: 'Royal pieces', blurb: 'Royal queen and common king.', piece: 'royalqueen', category: 'advanced',
     recap: [
       'Royal queen: moves like a queen, but is royal: it can be checked and mated like a king.',
       'Common king: moves like a king, but is not royal: it can be captured like any piece.',
-      'Brawn: a pawn that also captures one step forward plus one step in another dimension.',
     ],
     steps: [
       {
@@ -763,13 +780,6 @@ export const LESSONS = [
         say: 'A **common king** moves like a king but isn’t royal. The rook attacks it. Are you in check?',
         options: ['Yes', 'No'], answer: 1,
         ok: 'Not royal: losing it is like losing any other piece.',
-      },
-      {
-        type: 'play', at: [FAIRY_BRAWN],
-        say: 'A **brawn** is a pawn with more captures. Capture the knight: one timeline up and one file right.',
-        solution: '(0T1)c3(-1T1)d3',
-        wrong: 'One timeline up, one file right.',
-        ok: 'A pawn couldn’t: it captures across timelines only with a turn step.',
       },
     ],
   },
