@@ -120,8 +120,8 @@ The score is a betting score, as at infinitechess.org.
 For each action, it compares two likelihoods:
 
 - how likely a top, good or miss was for an engine user;
-- how likely it was for an honest player as strong as their rating plausibly allows (rating +
-  2 deviations).
+- how likely it was for an honest player as strong as the strongest players in the calibration
+  data (the same ceiling for every rating, so everyone is compared with the best).
 
 These ratios are bet with four cheating fractions (10%, 25%, 50%, 100% of actions) and
 averaged.
@@ -134,10 +134,38 @@ A player's score is the best over every run of recent games ending with the late
 A case opens when the score passes the case line **and** the player has at least 3 assessed
 games (`CASE_LOG_SCORE`, `MIN_GAMES`).
 
-**Calibration.** The model's weights are infinitechess.org's, fitted on infinite chess. 5D
-needs its own, fitted on this site's rated games once there are enough of them. Until then the
-case line is 100,000 to 1, far above infinitechess's 1,000, so only overwhelming evidence opens
-a case.
+**Calibration.** `GOOD_LOSS`, `MODEL` and `CASE_LOG_SCORE` are fitted by
+`scripts/fairplay/fit.mjs` on 222 rated Turn Zero games between the strongest community players
+(2021–2025, before any 5D engine was strong). `collect.mjs` analyses each position as the
+detector does (800k nodes, 5 lines) and, in the same positions, plays Kairos's own action at a
+cheater's budgets (200k, 600k and 1.5M nodes).
+
+| | Top | Good | Miss |
+| --- | --- | --- | --- |
+| The players' actions | 34% | 18% | 48% |
+| Kairos's actions | 65% | 25% | 10% |
+
+(At the chosen good-action threshold of 3% win probability. Kairos's own actions sometimes miss:
+its evaluation wobbles at this depth, which is why the engine-match score alone is never proof.)
+
+The case line is ten times the highest score honest histories reach: every real player's
+history, 99.9% of 30-game histories drawn from all the games, and 99.9% of each player's own
+games reordered. Every game is scored by a model fitted without it. The line comes to about 71 to
+1 (`CASE_LOG_SCORE` 4.26). At it, simulated cheaters fare as follows:
+
+| Actions from Kairos | Caught (median) | Within 10 games | Within 30 games |
+| --- | --- | --- | --- |
+| All | 3 games | 100% | 100% |
+| Half | 22 games | 24% | 71% |
+| A quarter | — | 0% | 0% |
+
+Occasional engine use is left to the page signals. Refit on this site's own games once there are
+enough:
+
+```sh
+node scripts/fairplay/collect.mjs target/fairplay/site.jsonl <dir of .5dpgn> <worker> <workers>
+node scripts/fairplay/fit.mjs target/fairplay/site.jsonl
+```
 
 ## Running
 

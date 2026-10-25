@@ -5,18 +5,18 @@
 // an honest player as strong as their rating plausibly allows. Pure: the detector
 // (scripts/fairplay/detect.mjs) and the admins' review page (review.js) share it.
 //
-// CALIBRATION: the model below is infinitechess.org's, fitted on infinite chess; 5D needs its
-// own, fitted on this site's rated games once there are enough (see docs/FAIR_PLAY.md). Until
-// then the case line is set far higher than theirs (CASE_LOG_SCORE), so that only overwhelming
-// evidence opens a case.
+// CALIBRATION: GOOD_LOSS, MODEL and CASE_LOG_SCORE are fitted (scripts/fairplay/fit.mjs) on 222
+// rated 5D games between the strongest community players, 2021-2025, before any 5D engine was
+// strong, analysed as the detector does, with Kairos's own actions in the same positions at a
+// cheater's budgets (docs/FAIR_PLAY.md). Refit on this site's games once there are enough.
 
 /**
- * Win-probability loss within which an action counts as good. infinitechess.org uses 2%, but
- * Kairos's win/draw/loss wobbles by more than that at this search's depth in 5D: in a local test,
- * actions copied from Kairos at full strength lost up to 4.8% by this analysis (median 0.5%),
- * while Kairos's level 2 lost more than 5% on 7 of 24 actions. Part of the calibration below.
+ * Win-probability loss within which an action counts as good. Of the thresholds tried (2, 3, 5
+ * and 8%), 3% catches part-time cheaters soonest: at it, the strong players' actions are 34% the
+ * search's top, 18% good and 48% misses, Kairos's 65% / 25% / 10% (its win/draw/loss wobbles at
+ * this search's depth, so even its own actions miss sometimes).
  */
-export const GOOD_LOSS = 0.05;
+export const GOOD_LOSS = 0.03;
 /** Positions this one-sided are left out: nearly every action keeps them so. */
 export const DECIDED = 0.97;
 /** A "shallow" look at the position: its best action at this depth. */
@@ -27,22 +27,32 @@ export const DEEP_FIND_DEPTH = 7;
 export const MULTIPV = 5;
 export const NODES = 800_000;
 
-/** The natural log of the score that opens a case (uncalibrated for 5D: far above infinitechess's 1,000). */
-export const CASE_LOG_SCORE = Math.log(100_000);
+/**
+ * The natural log of the score that opens a case: ten times the highest an honest history reaches
+ * (every real player's, 99.9% of 30-game histories drawn from all the games, 99.9% of each
+ * player's own games reordered), about 71 to 1. At it, cheaters who take every action from
+ * Kairos are caught in a median 3 games, and those who take half of them within 30 games 71% of
+ * the time. A case is only a review for the admins: nothing is ever done automatically.
+ */
+export const CASE_LOG_SCORE = 4.26;
 /** A case needs evidence from at least this many games. */
 export const MIN_GAMES = 3;
 /** Games older than this no longer count. */
 export const MAX_AGE_DAYS = 183;
 
-/** The bet (infinitechess.org's fitted model; see CALIBRATION above). */
+/**
+ * The bet (see CALIBRATION above). The honest ceiling is the same for every rating: the strongest
+ * player's own offset in the data plus a margin, so everyone is compared with the best honest
+ * players.
+ */
 export const MODEL = {
-  skillCeiling: { base: 0.03, perRating: 0.22, margin: 0.55 },
+  skillCeiling: { base: 0.673, perRating: 0, margin: 0 },
   cheatFractions: [0.1, 0.25, 0.5, 1],
-  honestGoodWeights: [0.712, -1.488, -0.959, -0.845, -0.731, -0.499, 1.251, 1.319],
-  honestTopRates: [1, 0.598, 0.435, 0.329, 0.152],
+  honestGoodWeights: [1.113, -1.145, -0.942, -0.358, -0.957, -0.238, 0.76, 0.6],
+  honestTopRates: [1, 0.552, 0.438, 0.527, 0.228],
   honestTopMargin: 0.05,
-  engineGoodWeights: [3.615, -1.535, -1.195, -0.822, -0.868, -1.147, 0.798, 1.031],
-  engineTopWeights: [0.432, 4.378, 1.232, 0.892, 0.175, -1.487, 0.494, 0.191],
+  engineGoodWeights: [3.955, -1.133, -0.162, 0.253, -1.347, -0.922, -0.296, -0.563],
+  engineTopWeights: [0.597, 5.078, 1.213, 0.658, -0.373, -1.302, -0.312, -0.487],
 };
 
 // ---------------------------------------------------------------- evidence
@@ -128,7 +138,10 @@ function logistic(w, x, offset = 0) {
   return 1 / (1 + Math.exp(-z));
 }
 
-/** The strongest an honest player of this rating plausibly is, in logits (rating + 2 deviations). */
+/**
+ * The strongest an honest player of this rating plausibly is, in logits (rating + 2 deviations).
+ * The fitted model sets perRating to 0: the same ceiling, the best players', for every rating.
+ */
 export function skillCeiling(rating, rd, model = MODEL) {
   const { base, perRating, margin } = model.skillCeiling;
   return base + (perRating * (rating + 2 * rd - 1500)) / 300 + margin;

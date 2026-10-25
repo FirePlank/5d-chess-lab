@@ -4,6 +4,7 @@
 // often honest players and engine users find good and top actions.
 //
 //   node scripts/fairplay/collect.mjs <out.jsonl> <dir of 5dpgn files> [worker] [workers] [games]
+//   (FILES=<list> takes the games named in that file, one a line, from the directory)
 //
 // Run one process per core (worker 0..workers-1); each appends one JSON line per game to
 // <out>.<worker> and skips the games already there, so a stopped run resumes. Per position it
@@ -43,8 +44,10 @@ function analyse(position, newGame) {
   return parseSearch(info);
 }
 
-const files = readdirSync(dir).filter((f) => f.endsWith('.5dpgn')).sort()
-  .filter((f, i) => i % +workers === +worker).slice(0, +maxGames);
+// FILES: a file listing the games to take (one name a line), instead of the whole directory.
+const all = process.env.FILES ? readFileSync(process.env.FILES, 'utf8').split(/\r?\n/).filter(Boolean)
+  : readdirSync(dir).filter((f) => f.endsWith('.5dpgn')).sort();
+const files = all.filter((f, i) => i % +workers === +worker).slice(0, +maxGames);
 const file = `${out}.${worker}`;
 const done = new Set(existsSync(file) ? readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l).file) : []);
 

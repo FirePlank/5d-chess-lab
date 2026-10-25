@@ -11,7 +11,8 @@
 // - sets the honest ceiling (the logit offset every honest player is granted) at the strongest
 //   player's own offset in the data, plus a margin: the bet is against the best honest players;
 // - scores every game with a model fitted without it (5 folds), and sets the case line above every
-//   real player's history and above 99.9% of 30-game histories drawn from all honest games, times ten;
+//   real player's history, above 99.9% of 30-game histories drawn from all honest games, and above
+//   99.9% of each player's own games (20 or more) in shuffled orders, times ten;
 // - simulates cheaters (all, half or a quarter of their actions from Kairos) and reports how many
 //   games they last.
 // It prints the chosen threshold, model and case line, and the report.
@@ -132,7 +133,7 @@ function fitModel(train) {
     if (!byPlayer.has(k)) byPlayer.set(k, []);
     byPlayer.get(k).push(...g.human[side]);
   }
-  const offsets = [...byPlayer.entries()].filter(([, e]) => e.length >= 150).map(([k, e]) => [k, playerOffset(e, honestGoodWeights)]);
+  const offsets = [...byPlayer.entries()].filter(([, e]) => e.length >= 100).map(([k, e]) => [k, playerOffset(e, honestGoodWeights)]);
   const strongest = offsets.reduce((m, o) => (o[1] > m[1] ? o : m), ['', 0]);
   return {
     skillCeiling: { base: Math.round((strongest[1] + 0.25) * 1000) / 1000, perRating: 0, margin: 0 },
@@ -181,7 +182,25 @@ function evaluate(goodLoss) {
     for (let n = 0; n < HISTORY; n++) { gs.push(pick(honestGames).ratios); max = Math.max(max, bestRunLogScore(gs)); }
     drawn.push(max);
   }
-  const line = Math.max(playerMax[0][2], q(drawn, 0.999)) + Math.log(10);
+  // Each strong player's own games in shuffled orders (their consistency, not the pool's): an
+  // unlucky order of the games they really played. Drawing with replacement instead repeats their
+  // single best game, and with 20-odd games that tail is noise.
+  const own = [...byPlayer.entries()].filter(([, gs]) => gs.length >= 20).map(([p, gs]) => {
+    const maxes = [];
+    for (let i = 0; i < 3000; i++) {
+      const order = gs.map((g) => g.ratios);
+      for (let j = order.length - 1; j > 0; j--) {
+        const k = Math.floor(rand() * (j + 1));
+        [order[j], order[k]] = [order[k], order[j]];
+      }
+      const hist = [];
+      let max = 0;
+      for (const r of order.slice(0, HISTORY)) { hist.push(r); max = Math.max(max, bestRunLogScore(hist)); }
+      maxes.push(max);
+    }
+    return [p, gs.length, q(maxes, 0.999)];
+  }).sort((a, b) => b[2] - a[2]);
+  const line = Math.max(playerMax[0][2], q(drawn, 0.999), own.length ? own[0][2] : 0) + Math.log(10);
   // Cheaters: each judged action from Kairos with probability f, else a person's.
   const power = CHEAT_FRACTIONS.map((f) => {
     const caught = [];
@@ -205,7 +224,7 @@ function evaluate(goodLoss) {
   });
   const rate = (pool, o) => pool.filter((x) => x.e.outcome === o).length / pool.length;
   return {
-    goodLoss, model: fitModel(ev), line, playerMax: playerMax.slice(0, 5), drawn999: q(drawn, 0.999), power,
+    goodLoss, model: fitModel(ev), line, playerMax: playerMax.slice(0, 5), drawn999: q(drawn, 0.999), own: own.slice(0, 5), power,
     rates: { human: { top: rate(humanPool, 'top'), good: rate(humanPool, 'good'), miss: rate(humanPool, 'miss'), n: humanPool.length },
       engine: { top: rate(cheatPool, 'top'), good: rate(cheatPool, 'good'), miss: rate(cheatPool, 'miss'), n: cheatPool.length } },
   };
@@ -216,6 +235,7 @@ const results = THRESHOLDS.map((t) => {
   const r = evaluate(t);
   const fmt = (x) => (x == null ? '-' : x.toFixed(3));
   console.log(`\ngood loss ${t}: line ln ${r.line.toFixed(2)} (x${Math.exp(r.line).toExponential(1)}); top honest players ${r.playerMax.map(([p, n, m]) => `${p} (${n}) ${m.toFixed(1)}`).join(', ')}; drawn 99.9% ${r.drawn999.toFixed(2)}`);
+  console.log(`  own-history 99.9%: ${r.own.map(([p, n, m]) => `${p} (${n}) ${m.toFixed(1)}`).join(', ') || '-'}`);
   console.log(`  rates: people ${fmt(r.rates.human.top)} top ${fmt(r.rates.human.good)} good ${fmt(r.rates.human.miss)} miss (${r.rates.human.n}); Kairos ${fmt(r.rates.engine.top)} / ${fmt(r.rates.engine.good)} / ${fmt(r.rates.engine.miss)} (${r.rates.engine.n})`);
   for (const p of r.power) console.log(`  cheating ${p.f}: median ${p.median} games, caught within 10 games ${(p.within10 * 100).toFixed(0)}%, within 30 ${(p.within30 * 100).toFixed(0)}%`);
   console.log(`  strongest players' offsets: ${r.model._offsets.map(([p, o]) => `${p} ${o.toFixed(2)}`).join(', ')}`);
