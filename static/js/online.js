@@ -639,10 +639,11 @@ export class OnlineGame {
       }, 1000 * this.engineTries);
       return;
     }
-    reportCrash({ message: e.message, stage: `online game, ${ENGINE_TRIES} tries`, game: this.id, ply: this.row.ply,
-      position: this.engine.lastPosition });
-    toast(`The engine could not run in this browser (${e.message}), so the game was aborted.`, { error: true });
     rpc('engine_resign', { p_id: this.id }).catch(report);
+    reportCrash({ message: e.message, stage: `online game, ${ENGINE_TRIES} tries`, game: this.id, ply: this.row.ply,
+      position: this.engine.lastPosition }, { notify: false }).then((sent) => toast(
+      `Kairos crashed in this browser, so the game was aborted (no result).${sent ? ' A crash report was sent so it can be fixed.' : ''}`,
+      { error: true, ms: 9000 }));
   }
 
   // ---------------------------------------------------------------- actions
