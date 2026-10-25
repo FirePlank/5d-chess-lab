@@ -139,15 +139,17 @@ function bindSettings() {
     const e = { san: '(0T2)Nf3', sanFull: '(0T2)Ng1f3', lone: true };
     $('#set-example').textContent = `Example: ${moveText(e)}`;
   };
-  const anim = $('#set-animations'), drag = $('#set-drag'), flip = $('#set-autoflip');
+  const anim = $('#set-animations'), drag = $('#set-drag'), flip = $('#set-autoflip'), linger = $('#set-linger');
   const showPrefs = () => {
     anim.checked = prefs.animations;
     flip.checked = prefs.autoFlip;
+    linger.checked = prefs.lingeringMarks;
     drag.value = prefs.dragThreshold;
     $('#set-drag-value').textContent = `${prefs.dragThreshold} px`;
   };
   anim.onchange = () => setPref('animations', anim.checked);
   flip.onchange = () => setPref('autoFlip', flip.checked);
+  linger.onchange = () => setPref('lingeringMarks', linger.checked);
   drag.oninput = () => setPref('dragThreshold', drag.value);
   window.addEventListener('prefs-change', showPrefs);
   squares.onchange = () => setNotation('omitSourceSquares', squares.checked);

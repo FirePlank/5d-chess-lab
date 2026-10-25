@@ -3,6 +3,7 @@
 import { $, el, toast, store, onWindow } from './util.js';
 import { sounds } from './sound.js';
 import { moveText } from './notation.js';
+import { prefs } from './prefs.js';
 
 /** Promotion letters (as the rules core's) to the names of their piece images. */
 const PROMO_NAMES = { Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', U: 'unicorn', D: 'dragon', S: 'princess', C: 'commonking' };
@@ -234,8 +235,8 @@ export class MoveInput {
     if (s.onMove && s.onMove(mv, this.draft) === false) return this.deselect();
     this.draft.push(mv);
     this.deselect();
-    // Playing a move clears the user's marks (as lichess).
-    this.board.clearMarks();
+    // Playing a move clears the user's marks (as lichess), unless they linger.
+    if (!prefs.lingeringMarks) this.board.clearMarks();
     const v = this.refresh();
     sounds.action(v.draftSan?.[this.draft.length - 1] || '', { check: false });
     // A lone action (nothing else left to play) submits itself.

@@ -803,9 +803,46 @@ export class OnlineGame {
     return { ms: Math.max(0, ms), delayLeft };
   }
 
+  /**
+   * The clocks as they were at the action shown, as lila's replay shows them: each side's time
+   * when it last moved by then (the start time before its first action); `moves[i].clk` is the
+   * mover's time after action i, increment included. Null at the live end of a game in progress
+   * (or one whose live row we hold): those clocks run from the row.
+   */
+  pastClocks() {
+    const g = this.row || this.finished;
+    const n = this.tree && this.tree.nodes[this.cur];
+    if (!g || g.base_ms == null || !n || (this.row && this.cur === this.lastNode())) return null;
+    if (this.firstMoverOf !== this.start) {
+      this.firstMoverOf = this.start;
+      this.firstMover = this.rules.call({ cmd: 'view', node: 0, draft: [] }).view.player === 1 ? 2 : 1;
+    }
+    const out = { 1: g.base_ms, 2: g.base_ms };
+    const moves = g.moves || [];
+    for (let i = 0; i < Math.min(n.ply, moves.length); i++) {
+      if (moves[i].clk != null) out[i % 2 === 0 ? this.firstMover : 3 - this.firstMover] = moves[i].clk;
+    }
+    // A game lost on time ends with the loser's flag down.
+    if (g.termination === 'time' && !n.children.length) out[g.result === '1-0' ? 2 : 1] = 0;
+    return out;
+  }
+
+  /** The clocks of `pastClocks` on the player bars, stopped. */
+  showPastClocks(past) {
+    const g = this.row || this.finished;
+    for (const [pos, side] of this.bars()) {
+      $(`#og-${pos}-clock`).textContent = clockText(past[side]);
+      $(`#og-${pos}-delay`).textContent = '';
+      const bar = $(`#og-${pos}`);
+      bar.classList.remove('running', 'delaying');
+      bar.classList.toggle('lowtime', past[side] < g.base_ms / 8);
+    }
+  }
+
   tick() {
     if (!this.active || !this.row || this.row.base_ms == null) return;
     const r = this.row;
+    const past = this.pastClocks();
     // A spectator reads the game again now and then: a realtime message that never came (a
     // dropped connection, the row gone right after the end) must not leave it watching a
     // clock that runs on in a game that is over.
@@ -816,12 +853,14 @@ export class OnlineGame {
     for (const [pos, side] of this.bars()) {
       const { ms, delayLeft } = this.timeLeft(side);
       const running = r.color_ticking === side && !r.result;
-      $(`#og-${pos}-clock`).textContent = clockText(ms);
-      $(`#og-${pos}-delay`).textContent = running && delayLeft > 0 ? `${r.active_timelines} TL · ${(delayLeft / 1000).toFixed(1)}s` : '';
-      const bar = $(`#og-${pos}`);
-      bar.classList.toggle('running', running && delayLeft <= 0);
-      bar.classList.toggle('delaying', running && delayLeft > 0);
-      bar.classList.toggle('lowtime', ms < r.base_ms / 8);
+      if (!past) {
+        $(`#og-${pos}-clock`).textContent = clockText(ms);
+        $(`#og-${pos}-delay`).textContent = running && delayLeft > 0 ? `${r.active_timelines} TL · ${(delayLeft / 1000).toFixed(1)}s` : '';
+        const bar = $(`#og-${pos}`);
+        bar.classList.toggle('running', running && delayLeft <= 0);
+        bar.classList.toggle('delaying', running && delayLeft > 0);
+        bar.classList.toggle('lowtime', ms < r.base_ms / 8);
+      }
       // A flag fell on this display: the server decides (once per turn).
       if (running && ms <= 0 && this.flagFor !== r.turn_started_at) {
         this.flagFor = r.turn_started_at;
@@ -881,10 +920,12 @@ export class OnlineGame {
       $(`#og-${pos}-dot`).className = `side-dot ${side === 1 ? 'white' : 'black'}`;
       $(`#og-${pos}`).classList.toggle('tempo', !!(r && this.live() && r.to_move === side));
       if (!r || r.base_ms == null) {
-        $(`#og-${pos}-clock`).textContent = f && f.base_ms != null ? '' : '';
+        $(`#og-${pos}-clock`).textContent = '';
         $(`#og-${pos}`).classList.remove('running', 'delaying', 'lowtime');
       }
     }
+    const past = this.pastClocks();
+    if (past) this.showPastClocks(past);
     const result = r ? r.result : f.result;
     const termination = r ? r.termination : f.termination;
     const at = this.tree && this.tree.nodes[this.cur];

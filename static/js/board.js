@@ -582,12 +582,14 @@ export class MultiverseView {
             if (boards.length) this.showBoards(boards, true);
           }
           this.redraw();
-        } else if (this.hasMarks()) {
+        } else if (this.hasMarks() && !prefs.lingeringMarks) {
           // A single left click (not a drag: that pans) clears the marks, and only that, as
           // on lichess: it does not also select a piece.
           this.clearMarks();
         } else {
           const sq = this.pick(e.offsetX, e.offsetY);
+          // Lingering marks stay through clicks on the boards; a click on empty space clears them.
+          if (!sq && this.hasMarks()) this.clearMarks();
           if (this.onSquare) this.onSquare(sq, e);
         }
       }

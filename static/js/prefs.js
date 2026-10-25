@@ -10,6 +10,9 @@ const DEFAULTS = {
   dragThreshold: 5,
   // On the analysis board, turn the board to the side to move whenever the position changes.
   autoFlip: false,
+  // Drawn arrows and highlights stay through clicks, selections and moves (as infinitechess.org's
+  // "Lingering annotations"); a click on empty space clears them. Off: any click clears them.
+  lingeringMarks: false,
 };
 
 const RANGE = { dragThreshold: [0, 24] };
