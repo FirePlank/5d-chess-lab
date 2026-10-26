@@ -258,9 +258,13 @@ export class OnlineGame {
 
   /** The challenge became a game (go and play it, or watch), or was cancelled (home). */
   async challengeGone() {
-    if (!this.challenge) return;
+    // Both of the acceptance's events (the seek gone, our active game) call this: one look at a time
+    // (two opened the game twice, and the second subscription to its channel failed).
+    if (!this.challenge || this.challengeLook) return;
     const id = this.id;
+    this.challengeLook = true;
     const st = await rpc('challenge_open', { p_tab: tab, p_id: id }).catch(() => null);
+    this.challengeLook = false;
     if (!st || this.id !== id || st.kind === 'open') return;
     this.challenge = null;
     if (st.kind === 'game') {
