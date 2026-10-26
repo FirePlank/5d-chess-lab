@@ -39,11 +39,16 @@ export function startClock(clock, id) {
   if (clock) Atomics.store(new Int32Array(clock, 0, 4), 1, id);
 }
 
+/** A wasm i32 address as the unsigned number it is (memory past 2 GB). */
+const u = (x) => x >>> 0;
+
 export function makeWasi({ clock = null, onStdout = null } = {}) {
   let memory = null;
   const ids = clock ? new Int32Array(clock, 0, 4) : null;
   const offset = clock ? new BigInt64Array(clock, 16, 1) : null;
   const view = () => new DataView(memory.buffer);
+  // Addresses come from wasm as i32: past 2 GB of memory (a big hash and many threads' stacks)
+  // they arrive negative, and a view at a negative offset throws. `u` reads them unsigned.
   const nowNs = () => {
     if (ids) {
       const cur = Atomics.load(ids, 1);
@@ -58,15 +63,16 @@ export function makeWasi({ clock = null, onStdout = null } = {}) {
   const lineBuf = { 1: '', 2: '' };
   const imports = {
     clock_time_get(_id, _precision, out) {
-      view().setBigUint64(out, nowNs(), true);
+      view().setBigUint64(u(out), nowNs(), true);
       return 0;
     },
     clock_res_get(_id, out) {
-      view().setBigUint64(out, 1000n, true);
+      view().setBigUint64(u(out), 1000n, true);
       return 0;
     },
     random_get(ptr, len) {
-      const bytes = new Uint8Array(memory.buffer, ptr, len);
+      const bytes = new Uint8Array(memory.buffer, u(ptr), u(len));
+      len = u(len);
       // getRandomValues refuses views over shared memory and more than 64 KiB at once.
       for (let i = 0; i < len; i += 65536) {
         const chunk = new Uint8Array(Math.min(65536, len - i));
@@ -79,8 +85,8 @@ export function makeWasi({ clock = null, onStdout = null } = {}) {
       const dv = view();
       let total = 0;
       for (let i = 0; i < iovsLen; i++) {
-        const ptr = dv.getUint32(iovs + i * 8, true);
-        const len = dv.getUint32(iovs + i * 8 + 4, true);
+        const ptr = dv.getUint32(u(iovs) + i * 8, true);
+        const len = dv.getUint32(u(iovs) + i * 8 + 4, true);
         const text = decoder.decode(new Uint8Array(memory.buffer, ptr, len).slice());
         if (fd === 1 || fd === 2) {
           lineBuf[fd] += text;
@@ -94,18 +100,18 @@ export function makeWasi({ clock = null, onStdout = null } = {}) {
         }
         total += len;
       }
-      dv.setUint32(nwritten, total, true);
+      dv.setUint32(u(nwritten), total, true);
       return 0;
     },
     environ_sizes_get(count, size) {
-      view().setUint32(count, 0, true);
-      view().setUint32(size, 0, true);
+      view().setUint32(u(count), 0, true);
+      view().setUint32(u(size), 0, true);
       return 0;
     },
     environ_get() { return 0; },
     args_sizes_get(count, size) {
-      view().setUint32(count, 0, true);
-      view().setUint32(size, 0, true);
+      view().setUint32(u(count), 0, true);
+      view().setUint32(u(size), 0, true);
       return 0;
     },
     args_get() { return 0; },
@@ -113,6 +119,7 @@ export function makeWasi({ clock = null, onStdout = null } = {}) {
     sched_yield() { return 0; },
     fd_close() { return 0; },
     fd_fdstat_get(fd, out) {
+      out = u(out);
       const dv = view();
       dv.setUint8(out, fd <= 2 ? 2 : 0); // character device
       dv.setUint16(out + 2, 0, true);
@@ -183,7 +190,7 @@ export async function instantiate(module, { clock = null, onInfo = null, memory 
     wasi_snapshot_preview1: wasi.imports,
     kairos: {
       info(ptr, len) {
-        if (onInfo) onInfo(decoder.decode(new Uint8Array(mem().buffer, ptr, len).slice()));
+        if (onInfo) onInfo(decoder.decode(new Uint8Array(mem().buffer, u(ptr), u(len)).slice()));
       },
     },
   };
@@ -199,9 +206,9 @@ export async function instantiate(module, { clock = null, onInfo = null, memory 
   return {
     call(req) {
       const bytes = encoder.encode(JSON.stringify(req));
-      const ptr = exports.kw_alloc(bytes.length);
+      const ptr = u(exports.kw_alloc(bytes.length));
       new Uint8Array(mem().buffer, ptr, bytes.length).set(bytes);
-      const out = exports.kw_call(ptr, bytes.length);
+      const out = u(exports.kw_call(ptr, bytes.length));
       exports.kw_free(ptr, bytes.length);
       const len = new DataView(mem().buffer).getUint32(out, true);
       const text = decoder.decode(new Uint8Array(mem().buffer, out + 4, len).slice());
