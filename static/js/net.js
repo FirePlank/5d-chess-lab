@@ -297,13 +297,15 @@ export async function syncClock() {
  * every time the subscription is (re)established (refetch then), `onPresence(state)` on presence
  * changes. Returns an unsubscribe function.
  */
-export function live(name, { table, filter, onChange, onSync, presence, onPresence } = {}) {
+export function live(name, { table, filter, onChange, onSync, presence, onPresence, broadcast } = {}) {
   const c = sb();
-  if (!c) return () => {};
+  if (!c) return Object.assign(() => {}, { send: () => {} });
   const channel = c.channel(name, presence ? { config: { presence: { key: presence.key } } } : undefined);
   if (table) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table, ...(filter ? { filter } : {}) }, (p) => onChange && onChange(p));
   }
+  // Messages between the pages on this channel (not the database's): {event: handler(payload)}.
+  for (const [event, fn] of Object.entries(broadcast || {})) channel.on('broadcast', { event }, (m) => fn(m.payload));
   if (presence) {
     channel.on('presence', { event: 'sync' }, () => onPresence && onPresence(channel.presenceState()));
   }
@@ -318,7 +320,10 @@ export function live(name, { table, filter, onChange, onSync, presence, onPresen
       setOnline(false);
     }
   });
-  return () => { c.removeChannel(channel); };
+  const off = () => { c.removeChannel(channel); };
+  /** Broadcast `payload` as `event` to the channel's other pages. */
+  off.send = (event, payload) => channel.send({ type: 'broadcast', event, payload }).catch(() => {});
+  return off;
 }
 
 /** Show a server refusal or failure as a toast. */

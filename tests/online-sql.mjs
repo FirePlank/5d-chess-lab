@@ -191,7 +191,11 @@ await call('game_open', { p_token: A, p_tab: 'tabA2', p_id: s3.id });
 await call('game_open', { p_token: B, p_tab: 'tabB2', p_id: s3.id });
 await move(A, 'tabA2', s3.id, 0, 2);
 await move(B, 'tabB2', s3.id, 1, 1);
+// The flag falls after a grace of the side's lag quota (1+0: 3 gains of 0.4 s), not at 0:00.
 await q(`update public.live_games set turn_started_at = now() - interval '61 seconds' where id = $1`, [s3.id]);
+await call('game_check', { p_id: s3.id });
+assert.equal((await game(s3.id)).result, null, 'within the grace');
+await q(`update public.live_games set turn_started_at = now() - interval '62 seconds' where id = $1`, [s3.id]);
 await call('game_check', { p_id: s3.id });
 g = await game(s3.id);
 assert.equal(g.result, '0-1');
@@ -292,4 +296,78 @@ await q(`update public.seeks set owner_away_since = now() - interval '11 minutes
 await one('select private.sweep()');
 assert.equal((await q('select * from public.seeks where id = $1', [pc2.id])).length, 0);
 
-console.log('online-sql: seeks, challenges, clocks, draws, claims, abandonment, time, Kairos games, rematch and chat passed');
+// ---------------------------------------------------------------- one write per action, lag compensation
+// Every update of a live row is a realtime message to each page watching it: an action is one.
+await db.exec(`create table public.test_writes (id text);
+  create function public.test_count() returns trigger language plpgsql as 'begin insert into public.test_writes values (new.id); return new; end';
+  create trigger test_count after update on public.live_games for each row execute function public.test_count();`);
+const writes = async (id, f) => {
+  await q('delete from public.test_writes');
+  const r = await f();
+  return [Number((await one('select count(*) as n from public.test_writes where id = $1', [id])).n), r];
+};
+const act = (token, tab, id, ply, next, extra = {}) => call('game_apply_move', {
+  p_token: token, p_tab: tab, p_id: id, p_ply: ply, p_lan: `m${ply}`, p_san: `s${ply}`, p_full: `f${ply}`, p_lone: true,
+  p_next_to_move: next, p_active: 1, p_status: null, ...extra,
+});
+const ago = (id, s) => q(`update public.live_games set turn_started_at = clock_timestamp() - interval '${s} seconds' where id = $1`, [id]);
+const near = (a, b, why) => assert.ok(Math.abs(Number(a) - b) < 150, `${why}: ${a} ≈ ${b}`);
+await flood();
+const lg = await seek(A, 'tabA6', { p_inc_ms: 0 }); // 5+0: lila's gain 1 s an action, quota 3 s, at most 7 s
+await call('seek_accept', { p_token: B, p_tab: 'tabB6', p_id: lg.id });
+await call('game_open', { p_token: A, p_tab: 'tabA6', p_id: lg.id });
+await call('game_open', { p_token: B, p_tab: 'tabB6', p_id: lg.id });
+await act(A, 'tabA6', lg.id, 0, 2);
+await act(B, 'tabB6', lg.id, 1, 1);
+// 3 s at the server, 1 s of thought at the page: the 2 s of lag are given back.
+await ago(lg.id, 3);
+let [n, res] = await writes(lg.id, () => act(A, 'tabA6', lg.id, 2, 2, { p_think_ms: 1000 }));
+assert.equal(n, 1, 'one write per action');
+near(res.comp, 2000, 'lag given back');
+g = await game(lg.id);
+near(g.white_ms, 299000, 'charged the second it thought');
+near(g.white_quota_ms, 2000, 'quota: 3 s + 1 s gained - 2 s given');
+assert.equal(g.moves[2].clk, Number(g.white_ms));
+// A page that says it never thinks gets its whole quota back and no more.
+await ago(lg.id, 10);
+[n, res] = await writes(lg.id, () => act(B, 'tabB6', lg.id, 3, 1, { p_think_ms: 0 }));
+near(res.comp, 3000, 'at most the quota');
+g = await game(lg.id);
+near(g.black_ms, 293000, 'the rest charged');
+near(g.black_quota_ms, 1000, 'quota spent');
+// An action whose compensated time ran out: the flag fell first, in one write.
+await q('update public.live_games set white_ms = 500 where id = $1', [lg.id]);
+await ago(lg.id, 3);
+[n, res] = await writes(lg.id, () => act(A, 'tabA6', lg.id, 4, 2, { p_think_ms: 2900 }));
+assert.equal(res.error, 'over');
+assert.equal(n, 1, 'the end is one write');
+g = await game(lg.id);
+assert.equal(g.result, '0-1');
+assert.equal(g.termination, 'time');
+// A mating action: the action, its clock and the end in one write.
+await flood();
+const mt = await seek(A, 'tabA7');
+await call('seek_accept', { p_token: B, p_tab: 'tabB7', p_id: mt.id });
+await call('game_open', { p_token: A, p_tab: 'tabA7', p_id: mt.id });
+await call('game_open', { p_token: B, p_tab: 'tabB7', p_id: mt.id });
+await act(A, 'tabA7', mt.id, 0, 2);
+await act(B, 'tabB7', mt.id, 1, 1);
+[n] = await writes(mt.id, () => act(A, 'tabA7', mt.id, 2, 2, { p_status: 'checkmate' }));
+assert.equal(n, 1, 'a mating action is one write');
+g = await game(mt.id);
+assert.equal(g.result, '1-0');
+assert.equal(g.moves.length, 3);
+assert.ok(await one('select * from public.games where id = $1', [mt.id]), 'logged');
+// The players' broadcast keys (public halves): only a player's own side, only a key's characters.
+await flood();
+const ky = await seek(A, 'tabA8');
+await call('seek_accept', { p_token: B, p_tab: 'tabB8', p_id: ky.id });
+await call('game_key', { p_token: A, p_id: ky.id, p_key: 'BAs3-_key' });
+await call('game_key', { p_token: B, p_id: ky.id, p_key: 'not a key!' });
+await call('game_key', { p_token: C, p_id: ky.id, p_key: 'spectator' });
+g = await game(ky.id);
+assert.equal(g.white_key, 'BAs3-_key');
+assert.equal(g.black_key, null);
+await db.exec('drop trigger test_count on public.live_games');
+
+console.log('online-sql: seeks, challenges, clocks, draws, claims, abandonment, time, Kairos games, rematch, chat, one write per action, lag compensation and keys passed');

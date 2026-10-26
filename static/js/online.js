@@ -15,6 +15,7 @@ import { tcLabel, tcText, speed, clockText } from './tc.js';
 import { account, ratingText, profileHref, refreshAccount } from './account.js';
 import * as fairplay from './fairplay.js';
 import { reportCrash } from './crash.js';
+import * as movesign from './movesign.js';
 import { $, el, toast, onWindow } from './util.js';
 
 /** An action block that appears ignores clicks this long (one meant for the block it replaced). */
@@ -160,6 +161,11 @@ export class OnlineGame {
       row: null, role: null, finished: null, tree: null, cur: 0, lans: [], start: null, pending: null,
       chat: [], chatSince: 0, searchFor: null, flagFor: null, lowtimePlayed: false, superseded: false,
       detached: false, spectators: 0, me: null, prevRow: null, revealAt: 0,
+      // Broadcast actions (movesign.js): our key, the channel's sender, the opponent's action
+      // shown before the database confirmed it ({ply, lan, at}), and our reply to it held until then.
+      key: null, channelSend: null, ahead: null, queued: null,
+      // When this page saw the turn it is now ours to play ({ply, at}): the think time sent for lag compensation.
+      turnSeen: null,
     });
   }
 
@@ -346,7 +352,7 @@ export class OnlineGame {
       return;
     }
     if (this.role) setPresence('game', id);
-    this.offs = [live(`game-${id}`, {
+    const channel = live(`game-${id}`, {
       table: 'live_games', filter: `id=eq.${id}`,
       onChange: (p) => {
         if (p.eventType === 'DELETE') this.evicted();
@@ -359,8 +365,19 @@ export class OnlineGame {
         this.spectators = Object.values(s).flat().filter((m) => !m.role).length;
         this.renderMeta();
       },
-    })];
+      broadcast: { move: (m) => this.onBroadcast(m) },
+    });
+    this.offs = [channel];
+    this.channelSend = channel.send;
     this.applyRow(r.game, { initial: true });
+    // Our key for the actions we broadcast (a game between people: Kairos's actions come from the database only).
+    if (this.role && !r.game.engine_color && !r.game.result) {
+      movesign.newKey().then((key) => {
+        if (this.id !== id) return;
+        this.key = key;
+        rpc('game_key', { p_id: id, p_key: key.pub }).catch(() => {});
+      }).catch(() => {});
+    }
     if (this.role) this.loadChat();
     this.showGame();
   }
@@ -448,21 +465,35 @@ export class OnlineGame {
     this.row = row;
     const lans = row.moves.map((m) => m.lan);
     const atEnd = this.cur === this.lastNode();
+    // The opponent's broadcast action, now in the database: confirmed, unless another action came
+    // in its place (its page showed one action and sent another): then the game is read afresh.
+    let changed = false;
+    if (this.ahead && lans.length > this.ahead.ply) {
+      changed = lans[this.ahead.ply] !== this.ahead.lan;
+      this.ahead = null;
+      if (changed && this.role) toast('Your opponent’s page showed one action and played another: the game was read again.', { error: true });
+    }
     // Our own action, sent and shown at once, until the server has it.
     if (this.pending && lans.length > this.pending.ply) this.pending = null;
-    const local = this.pending ? this.lans.slice(0, this.pending.ply) : this.lans;
-    const prefix = this.start === row.position && local.length <= lans.length && local.every((m, i) => m === lans[i]);
-    if (this.pending && !resync && lans.length === this.pending.ply) {
+    // What this page shows that the database doesn't have yet: from the first unconfirmed action on.
+    const unconfirmed = Math.min(this.pending ? this.pending.ply : Infinity, this.ahead ? this.ahead.ply : Infinity);
+    const local = unconfirmed < Infinity ? this.lans.slice(0, unconfirmed) : this.lans;
+    const prefix = !changed && this.start === row.position && local.length <= lans.length && local.every((m, i) => m === lans[i]);
+    if (unconfirmed < Infinity && !resync && prefix && lans.length === unconfirmed) {
       // Still on its way: keep showing it.
     } else if (!prefix) {
       this.loadMoves(row.position, lans);
       this.pending = null;
+      this.ahead = null;
+      this.queued = null;
     } else {
-      let node = this.pending ? this.nodeAtPly(this.pending.ply) : this.lastNode();
-      if (this.pending) {
-        // Truncate the unconfirmed action before replaying the server's.
+      let node = unconfirmed < Infinity ? this.nodeAtPly(unconfirmed) : this.lastNode();
+      if (unconfirmed < Infinity) {
+        // Truncate the unconfirmed actions before replaying the server's.
         this.loadMoves(row.position, lans);
         this.pending = null;
+        this.ahead = null;
+        this.queued = null;
         node = this.lastNode();
       } else {
         for (let i = this.lans.length; i < lans.length; i++) {
@@ -477,6 +508,18 @@ export class OnlineGame {
         if (this.cur !== node) this.input.reset();
         this.cur = node;
       }
+    }
+    // Our reply to the opponent's broadcast action goes once the database has that action.
+    if (this.queued) {
+      const qd = this.queued;
+      if (this.pending && this.live() && row.ply === qd.ply) {
+        this.queued = null;
+        this.send(qd.ply, qd.lan, qd.signals, qd.think);
+      } else if (!this.pending || row.ply > qd.ply) this.queued = null;
+    }
+    // Our turn began on this page now (or when the broadcast showed the opponent's action).
+    if (this.role && row.to_move === this.role && !row.result && !(this.turnSeen && this.turnSeen.ply >= row.ply)) {
+      this.turnSeen = { ply: row.ply, at: performance.now() };
     }
     // Events.
     if (!initial && prev) {
@@ -534,6 +577,8 @@ export class OnlineGame {
     const r = this.row;
     if (!r || !this.role || !this.live() || this.pending || this.cur !== this.lastNode()) return false;
     if (r.engine_color && r.to_move === r.engine_color) return false;
+    // The opponent's action shown from its broadcast: ours to answer (sent once it's confirmed).
+    if (this.ahead && this.ahead.ply === r.ply) return 3 - r.to_move === this.role;
     return r.to_move === this.role;
   }
 
@@ -551,26 +596,80 @@ export class OnlineGame {
   async submit(moves) {
     const r = this.row;
     if (!this.myTurn()) return;
-    const lan = moves.map(lanText).join(' ');
-    const ply = r.ply;
+    // An answer to the opponent's broadcast action comes after it.
+    const ply = this.ahead && this.ahead.ply === r.ply ? r.ply + 1 : r.ply;
     const p = this.rules.call({ cmd: 'play', node: this.cur, moves });
     this.tree = p.tree;
     this.cur = p.node;
-    this.lans.push(this.tree.nodes[p.node].lan);
-    this.pending = { ply, lan: this.tree.nodes[p.node].lan };
+    const lan = this.tree.nodes[p.node].lan;
+    this.lans.push(lan);
+    this.pending = { ply, lan };
     sounds.action(this.tree.nodes[p.node].san, { move: false, check: true });
     this.restoreTitle();
     this.turnOn = false;
     const signals = fairplay.takeSignals();
+    // How long we thought, as this page saw it (lag compensation).
+    const think = this.turnSeen && this.turnSeen.ply === ply ? performance.now() - this.turnSeen.at : null;
+    this.broadcast(ply, lan);
     this.render();
-    await this.send(ply, this.pending.lan, signals);
+    // The opponent's action isn't in the database yet: ours goes the moment it is (applyRow).
+    if (ply > r.ply) {
+      this.queued = { ply, lan, signals, think };
+      return;
+    }
+    await this.send(ply, lan, signals, think);
   }
 
-  /** Send an action (ours, with its turn's fair-play `signals`, or Kairos's). */
-  async send(ply, lan, signals = undefined) {
+  /** Show our action to the game's other pages at once, signed (movesign.js). */
+  async broadcast(ply, lan) {
+    const key = this.key, send = this.channelSend, id = this.id;
+    if (!key || !send || !this.row || this.row.engine_color) return;
+    try {
+      send('move', { ply, lan, sig: await movesign.sign(key, id, ply, lan) });
+    } catch (e) { /* the database's update shows it anyway */ }
+  }
+
+  /**
+   * The opponent's action from its page, before the database has it: shown at once when its
+   * signature is the mover's key on the row and the action is legal here; the database's update
+   * confirms it (applyRow).
+   */
+  async onBroadcast(m) {
+    const fits = () => {
+      const r = this.row;
+      return r && this.live() && !r.engine_color && m && typeof m.lan === 'string' && typeof m.sig === 'string' && m.ply === r.ply
+        && !this.ahead && !this.pending && this.lans.length === r.ply;
+    };
+    if (!fits()) return;
+    const r = this.row;
+    const pub = r.to_move === 1 ? r.white_key : r.black_key;
+    if (!pub || !(await movesign.verify(pub, m.sig, this.id, m.ply, m.lan)) || !fits()) return;
+    let p;
+    try {
+      p = this.rules.call({ cmd: 'play', node: this.lastNode(), lan: m.lan });
+    } catch (e) {
+      return;
+    }
+    const atEnd = this.cur === this.lastNode();
+    this.tree = p.tree;
+    const lan = this.tree.nodes[p.node].lan;
+    this.lans.push(lan);
+    // The mover's clock stops here on this page; the database starts ours when it has the action.
+    this.ahead = { ply: m.ply, lan, at: serverNow() };
+    if (this.role === 3 - r.to_move) this.turnSeen = { ply: m.ply + 1, at: performance.now() };
+    if (atEnd) {
+      this.input.reset();
+      this.cur = p.node;
+    }
+    if (this.active) sounds.action(this.tree.nodes[p.node].san, { check: true });
+    this.render();
+  }
+
+  /** Send an action (ours, with its turn's fair-play `signals` and think time, or Kairos's). */
+  async send(ply, lan, signals = undefined, think = null) {
     let res;
     try {
-      res = await edge('move', { id: this.id, ply, lan, signals });
+      res = await edge('move', { id: this.id, ply, lan, signals, ...(think != null ? { think_ms: Math.round(think) } : {}) });
     } catch (e) {
       report(e);
       // Sent again once the connection returns (if the game still waits for it).
@@ -822,7 +921,9 @@ export class OnlineGame {
     let ms = side === 1 ? r.white_ms : r.black_ms;
     let delayLeft = 0;
     if (r.color_ticking === side && !r.result) {
-      const elapsed = serverNow() - Date.parse(r.turn_started_at);
+      // A broadcast action stopped the mover's clock on this page until the database has it.
+      const now = this.ahead && this.ahead.ply === r.ply ? this.ahead.at : serverNow();
+      const elapsed = now - Date.parse(r.turn_started_at);
       delayLeft = Math.max(0, r.turn_delay_ms - elapsed);
       ms -= Math.max(0, elapsed - r.turn_delay_ms);
     }
@@ -891,6 +992,11 @@ export class OnlineGame {
       if (running && ms <= 0 && this.flagFor !== r.turn_started_at) {
         this.flagFor = r.turn_started_at;
         rpc('game_check', { p_id: this.id }).catch(() => {});
+        // The flag falls after a grace of the side's lag quota (2 s at most): ask again then.
+        const turn = r.turn_started_at;
+        setTimeout(() => {
+          if (this.live() && this.row.turn_started_at === turn) rpc('game_check', { p_id: this.id }).catch(() => {});
+        }, 2200);
       }
       // Our clock below an eighth of the start: one sound per game.
       if (running && side === this.role && !this.lowtimePlayed && ms < r.base_ms / 8 && r.base_ms >= 60000) {

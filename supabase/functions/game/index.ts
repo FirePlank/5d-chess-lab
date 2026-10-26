@@ -112,6 +112,8 @@ export async function handle(body: Json, db: Db): Promise<Json> {
       });
     }
     case 'move': {
+      // The action's time is when it reached the server: its replay below isn't the player's.
+      const receivedAt = new Date().toISOString();
       const id = str(body.id, 'game id', 16);
       const lan = str(body.lan, 'action', 4000);
       const g = await db.game(id);
@@ -130,11 +132,22 @@ export async function handle(body: Json, db: Db): Promise<Json> {
       } catch (e) {
         return { error: 'illegal', message: (e as Error).message };
       }
-      return db.rpc('game_apply_move', {
+      const args: Json = {
         p_token: token, p_tab: tab, p_id: id, p_ply: g.ply, p_lan: played.lan, p_san: played.san, p_full: played.sanFull,
         p_lone: played.lone, p_next_to_move: played.toMove === 'w' ? 1 : 2, p_active: played.active, p_status: played.status,
         p_signals: signals(body.signals), p_key: await positionKey(played.boards),
-      });
+      };
+      // Lag compensation: the player's think time as their page measured it (a whole number of ms
+      // under a day; the database gives back at most the player's lag quota for it).
+      const think = Number(body.think_ms);
+      const timing = { p_received_at: receivedAt, ...(Number.isFinite(think) && think >= 0 && think < 86_400_000 ? { p_think_ms: Math.round(think) } : {}) };
+      try {
+        return await db.rpc('game_apply_move', { ...args, ...timing });
+      } catch (e) {
+        // Deployed before the database has the timing arguments (PGRST202: no such function).
+        if (!String((e as Error).message).includes('PGRST202')) throw e;
+        return db.rpc('game_apply_move', args);
+      }
     }
   }
   throw new UserError('Unknown action.');

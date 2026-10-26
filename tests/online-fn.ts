@@ -63,8 +63,11 @@ r = await mv(A, 'tabA', 1, '(0T1)b1c3');
 assert(r.error === 'resync', 'out of turn');
 r = await mv(B, 'tabB', 0, '(0T1)g8f6');
 assert(r.error === 'resync', 'stale ply');
-r = await mv(B, 'tabB', 1, '(0T1)g8f6');
+r = await handle({ action: 'move', token: B, tab: 'tabB', id, ply: 1, lan: '(0T1)g8f6', think_ms: 1234.4 }, Db);
 assert(r.ok, 'reply');
+// Lag compensation's inputs: when the action reached the server, and the page's think time.
+assert(Date.now() - Date.parse(Db.last.game_apply_move.p_received_at) < 60_000, 'received at');
+assert(Db.last.game_apply_move.p_think_ms === 1234, 'think time ' + Db.last.game_apply_move.p_think_ms);
 let g = (await db.query('select * from public.live_games where id = $1', [id])).rows[0] as any;
 assert(g.moves[0].san === '(0T1)Nf3' && g.moves[0].full === '(0T1)Ng1f3', 'notation stored ' + JSON.stringify(g.moves[0]));
 assert(g.color_ticking === 1 && g.turn_delay_ms === 3000, 'clock with 3 s per timeline');

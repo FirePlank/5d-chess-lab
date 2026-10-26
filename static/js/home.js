@@ -80,7 +80,26 @@ export class Home {
       document.addEventListener(ev, () => { this.lastInput = Date.now(); }, { capture: true, passive: true });
     }
     onConnection((on) => { if (on && this.active && !this.idle) this.refresh(); });
+    document.addEventListener('visibilitychange', () => this.onVisibility());
     setInterval(() => this.tick(), 1000);
+  }
+
+  /**
+   * A hidden lobby follows nothing (no realtime messages, and its connection closes once no
+   * channel is left), unless our seek waits for an opponent; shown again, it subscribes and reads
+   * the lobby afresh at once.
+   */
+  onVisibility() {
+    if (!this.active || this.idle) return;
+    if (document.hidden) {
+      const ours = [...this.seeks.values()].some((s) => s.owner === this.mePid);
+      if (ours || !this.subs) return;
+      this.hiddenOff = true;
+      this.unsubscribe();
+    } else if (this.hiddenOff) {
+      this.hiddenOff = false;
+      this.subscribe();
+    }
   }
 
   activate(params) {
@@ -101,6 +120,7 @@ export class Home {
   deactivate() {
     this.active = false;
     this.title.stop();
+    this.hiddenOff = false;
     this.unsubscribe();
     // Leaving the lobby takes our public seek away (as closing it does).
     setPresence(null);

@@ -119,6 +119,7 @@ node tests/accounts-sql.mjs                 # accounts, the rating import, rated
 node tests/fairplay-sql.mjs                 # admins, a guest's history moving to the account, fair play in PGlite
 node tests/fairplay-score.mjs               # fair play's judging, signal rules and bet
 node tests/profiles-sql.mjs                 # profiles (renaming, bio, closing), challenges to a player, community
+node tests/movesign.mjs                     # the signatures of broadcast actions
 deno run -A tests/online-fn.ts              # the game edge function with the rules core (after cargo wasm-server)
 ```
 
@@ -130,6 +131,27 @@ calls (anonymous players pass their token; the database stores only its SHA-256)
 runs the timers every 10 s. `supabase/functions/game/` is the edge function that checks new
 games and every action with the Kairos rules core (it fetches the published `kairos-server.wasm`)
 before the database applies it. The Supabase GitHub integration deploys both on a push to `main`.
+
+### How an action travels, and the clocks
+
+- **One write per action.** `game_apply_move` works out the action, its clock, the game's end
+  and the rating changes first and writes the live row once: realtime sends each page watching
+  the game one message per action.
+- **Broadcast first.** The mover's page also broadcasts the action on the game's realtime
+  channel, signed with a key made for the game (`static/js/movesign.js`: ECDSA P-256, the
+  private half never leaves the page, the public half is on the row via `game_key`). The other
+  pages check the signature and that the action is legal, and show it at once, before the
+  database has it; a reply to it is sent the moment the database confirms it, and if the
+  database has another action instead the game is read afresh.
+- **Lag compensation (lila's).** The page sends how long the player thought, as it measured it;
+  the server's elapsed time (from the action reaching the edge function) beyond that is lag,
+  given back from a quota that grows by a gain per action (1 s in long games down to 0.2 s in the
+  fastest) up to 7 gains. A page that lies gets at most the gain per action. A flag falls after
+  a grace of the side's quota (2 s at most), and an action that comes in time with its lag given
+  back is taken.
+- **A hidden lobby follows nothing** (no realtime messages, and its connection closes) unless
+  your seek waits for an opponent; shown again, it reads the lobby at once. Game pages, for
+  players and spectators, stay subscribed.
 
 ### Accounts (Supabase Auth)
 
