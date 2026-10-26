@@ -25,6 +25,11 @@ const CONFIRM_MS = 3000;
 const UNTIMED_MOVETIME = 3000;
 /** Kairos's search is tried this many times (the engine restarted between) before the game is aborted. */
 const ENGINE_TRIES = 3;
+/** Positions the rules end: Kairos has no action there, and the server ends the game. */
+const OVER = new Set(['checkmate', 'stalemate', 'exiled-white', 'exiled-black']);
+/** A Kairos turn in a position that is over reads the game again this often (ms), this many times, until the end shows. */
+const OVER_POLL_MS = 1500;
+const OVER_POLLS = 10;
 
 const NOTICES = {
   'draw-offered': ['You offered a draw.', 'Opponent offered a draw.'],
@@ -363,8 +368,11 @@ export class OnlineGame {
   async refetch() {
     if (!this.row) return;
     const { data } = await sb().from('live_games').select('*').eq('id', this.id).maybeSingle();
-    if (data) this.applyRow(data, { resync: true });
-    else this.evicted();
+    if (!data) return this.evicted();
+    // A read from before what realtime has told us since (it answered late) never takes the game back.
+    const held = this.row;
+    if (held && ((held.result && !data.result) || data.ply < held.ply)) return;
+    this.applyRow(data, { resync: true });
   }
 
   /** The live row went (both players left after the game): it stays on screen, from the record. */
@@ -586,10 +594,21 @@ export class OnlineGame {
       if (this.searchFor != null && this.searchFor !== r.ply) this.stopEngine();
       return;
     }
+    const node = this.nodeAtPly(r.ply);
+    const view = this.rules.call({ cmd: 'view', node, draft: [] }).view;
+    if (OVER.has(view.status)) {
+      // The last action ended the game (game ocaMPq: mate at ply 51): the server has ended it, and
+      // its end is on its way. No search (it would find no action); if the end doesn't come, read it.
+      if (this.searchFor != null) this.stopEngine();
+      clearTimeout(this.overPoll);
+      if (this.overPly !== r.ply) { this.overPly = r.ply; this.overPolls = 0; }
+      if (this.overPolls++ >= OVER_POLLS) return;
+      this.overPoll = setTimeout(() => { if (this.live() && this.row.ply === r.ply) this.refetch(); }, OVER_POLL_MS);
+      return;
+    }
     if (this.searchFor === r.ply) return;
     this.searchFor = r.ply;
-    const node = this.nodeAtPly(r.ply);
-    const position = this.rules.call({ cmd: 'view', node, draft: [] }).view.position;
+    const position = view.position;
     const left = this.timeLeft(r.engine_color);
     const limits = r.base_ms != null
       ? { movetime: null, timeLeft: Math.max(100, Math.round(left.ms)), increment: r.inc_ms, delay: r.delay_ms, delayPerTimeline: r.tl_delay_ms }
@@ -639,6 +658,12 @@ export class OnlineGame {
       }, 1000 * this.engineTries);
       return;
     }
+    // The game may have ended without this page hearing of it: read it before calling it a crash.
+    this.refetch().catch(() => {}).then(() => { if (this.live()) this.engineGaveUp(e); });
+  }
+
+  /** Kairos's search kept failing in a game still on: abort it, and report the crash. */
+  engineGaveUp(e) {
     rpc('engine_resign', { p_id: this.id }).catch(report);
     reportCrash({ message: e.message, stage: `online game, ${ENGINE_TRIES} tries`, game: this.id, ply: this.row.ply,
       position: this.engine.lastPosition }, { notify: false }).then((sent) => toast(
