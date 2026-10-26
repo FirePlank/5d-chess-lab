@@ -351,7 +351,7 @@ export class Editor {
       piece: `Click or drag to place a ${name}; on the same piece, it removes it. Right-click swaps its colour. Keys: a piece's letter (Shift for White). WASD pans only in the Move tool.`,
       erase: 'Click or drag over pieces to remove them.',
       unmoved: 'A filled dot marks a king or rook that can still castle, a pawn or brawn that can still move two squares; a ring, one that has moved. Click or drag over pieces to toggle them.',
-      boards: 'Click a + to add a board (a copy of its neighbour). Drag boards to move them, Ctrl+drag to copy; click a timeline\'s label to select it all, Shift+drag to select several. Del deletes.',
+      boards: 'Click a + to add a board there (a copy of its timeline\'s nearest board). Drag boards to move them, Ctrl+drag to copy; click a timeline\'s label to select it all, Shift+drag to select several. Del deletes.',
     }[this.tool];
   }
 
@@ -589,38 +589,50 @@ export class Editor {
   }
 
   // ---------------------------------------------------------------- boards and timelines
-  /** An empty slot where a board can be added: next to a timeline's ends, in a gap of one,
-   * or on a new timeline next to the outermost ones. */
+  /** An empty slot where a board can be added: any half-turn of a timeline (late starts and
+   * gaps too), or of a new timeline next to the outermost ones. */
   isGhost(l, v) {
     if (v < 0 || this.m.boards.has(key(l, v))) return false;
     const rows = this.m.rows();
-    const r = rows.get(l);
-    if (r) return v >= r.min - 1 && v <= r.max + 1;
-    const adj = rows.get(l - 1) || rows.get(l + 1);
-    if (!adj) return false;
-    return v >= adj.min && v <= adj.max + 1;
+    return rows.has(l) || rows.has(l - 1) || rows.has(l + 1);
   }
 
-  /** The ghost slots drawn: every timeline's two ends and its gaps (new timelines' slots only
-   * appear under the pointer). */
+  /** The ghost slots drawn: the empty slots next to each board (the half-turns before and
+   * after it, and the same half-turn on the timelines above and below); any other slot only
+   * under the pointer. */
   ghosts() {
-    const out = [];
-    const rows = this.m.rows();
-    for (const [l, r] of rows) {
-      for (let v = Math.max(0, r.min - 1); v <= r.max + 1; v++) if (!this.m.boards.has(key(l, v))) out.push([l, v]);
+    const out = new Set();
+    for (const k of this.m.boards.keys()) {
+      const [l, v] = unkey(k);
+      for (const [ll, w] of [[l, v - 1], [l, v + 1], [l - 1, v], [l + 1, v]]) {
+        if (w >= 0 && !this.m.boards.has(key(ll, w))) out.add(key(ll, w));
+      }
     }
     const h = this.hoverSlot;
-    if (h && !rows.has(h.l) && this.isGhost(h.l, h.v)) out.push([h.l, h.v]);
-    return out;
+    if (h && this.isGhost(h.l, h.v)) out.add(key(h.l, h.v));
+    return [...out].map(unkey);
   }
 
-  /** Add a board on an empty slot: a copy of the board before it on its timeline (or after
-   * it), or for a new timeline, of the neighbouring timeline's board it would branch from. */
+  /** The board on timeline l nearest half-turn v (the earlier one on a tie), if any. */
+  nearest(l, v) {
+    let best = null, bd = Infinity;
+    for (const [k, sq] of this.m.boards) {
+      const [bl, bv] = unkey(k);
+      if (bl !== l) continue;
+      const d = Math.abs(bv - v) + (bv > v ? 0.5 : 0);
+      if (d < bd) { best = sq; bd = d; }
+    }
+    return best;
+  }
+
+  /** Add a board on an empty slot: a copy of the nearest board on its timeline, or for a new
+   * timeline, of the neighbouring timeline's board it would branch from (else its nearest). */
   addBoard(l, v) {
     const m = this.m;
-    const src = m.boards.get(key(l, v - 1)) || m.boards.get(key(l, v + 1))
+    const src = this.nearest(l, v)
       || m.boards.get(key(l - 1, v - 1)) || m.boards.get(key(l + 1, v - 1))
-      || m.boards.get(key(l - 1, v)) || m.boards.get(key(l + 1, v));
+      || m.boards.get(key(l - 1, v)) || m.boards.get(key(l + 1, v))
+      || this.nearest(l - 1, v) || this.nearest(l + 1, v);
     this.change((mm) => {
       mm.boards.set(key(l, v), src ? src.slice() : mm.empty());
       this.selection = new Set([key(l, v)]);

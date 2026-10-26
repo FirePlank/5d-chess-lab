@@ -744,8 +744,17 @@ export class MultiverseView {
       if (y < vy0 - this.py || y > vy1 + this.py) continue;
       const a = Math.max(2 * tl.start[0] + tl.start[1], vMin), b = Math.min(2 * tl.end[0] + tl.end[1], vMax);
       if (b <= a) continue;
-      ctx.moveTo(this.boardX(a) + this.bw, y);
-      ctx.lineTo(this.boardX(b), y);
+      // Broken where a board is missing (a timeline with gaps, in the editor).
+      for (let s0 = a; s0 < b; s0++) {
+        if (!this.boards.has(`${tl.l},${s0}`)) continue;
+        let s1 = s0;
+        while (s1 < b && this.boards.has(`${tl.l},${s1 + 1}`)) s1++;
+        if (s1 > s0) {
+          ctx.moveTo(this.boardX(s0) + this.bw, y);
+          ctx.lineTo(this.boardX(s1), y);
+        }
+        s0 = s1;
+      }
     }
     ctx.stroke();
 
