@@ -169,6 +169,8 @@ export class Practice {
 
   deactivate() {
     this.active = false;
+    // Kairos's reply waits until the page is back (activate resumes it): nothing runs elsewhere.
+    this.stopEngine();
   }
 
   start(c) {

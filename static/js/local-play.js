@@ -177,10 +177,31 @@ export class LocalPlay {
     this.engine.search({ position, movetime: PONDER_MS }).catch(() => {});
   }
 
-  /** Back on the Play page: if Kairos's search was replaced meanwhile (analysis), search again. */
+  /**
+   * Off the Play page: Kairos stops thinking (and pondering), nothing runs in the background. On
+   * its own turn its clock stops too (as an online game's Kairos while its player is away).
+   */
+  pause() {
+    const g = this.game;
+    if (!g || g.over || this.pausedAt != null) return;
+    this.pausedAt = performance.now();
+    this.searchId = null;
+    this.searchFor = null;
+    g.thinking = false;
+    this.engine.stop();
+  }
+
+  /** Back on the Play page: Kairos searches (or ponders) again, its clock going on from where it stopped. */
   resume() {
     const g = this.game;
-    if (!g || g.over || g.toMove === g.humanColor) return;
+    const pausedAt = this.pausedAt;
+    this.pausedAt = null;
+    if (!g || g.over) return;
+    if (g.toMove === g.humanColor) {
+      if (pausedAt != null) this.ponder(this.view(g.node).position);
+      return;
+    }
+    if (pausedAt != null) g.turnStart += performance.now() - pausedAt;
     if (this.searchId != null && this.engine.busy && this.engine.reqId === this.searchId) return;
     this.think(this.view(g.node).position);
   }
@@ -237,6 +258,8 @@ export class LocalPlay {
   tick() {
     const g = this.game;
     if (!g || g.over || !g.clock) return;
+    // Paused on Kairos's turn: its clock stands still.
+    if (this.pausedAt != null && g.toMove !== g.humanColor) return;
     const side = g.toMove === 'w' ? 0 : 1;
     if (this.clockNow()[side] > 0) return;
     const human = g.toMove === g.humanColor;

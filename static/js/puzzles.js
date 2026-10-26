@@ -572,6 +572,8 @@ export class Puzzles {
   /** A search of `position` for `ms`: {cp|mate (the side to move's), bestmove}. */
   search(position, ms) {
     this.stopEngine();
+    // Off the Puzzles page nothing searches for it (a reply awaited when the page was left).
+    if (!this.active) return Promise.reject(new Error('stopped'));
     return new Promise((resolve, reject) => {
       this.pending = { resolve, reject, info: {} };
       this.engine.search({ position, movetime: ms, skillLevel: 8, book: false, newGame: false }).catch(reject);

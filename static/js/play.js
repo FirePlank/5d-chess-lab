@@ -206,6 +206,7 @@ export class Play {
 
   deactivate() {
     this.active = false;
+    if (this.local) this.local.pause();
   }
 
   connect() {

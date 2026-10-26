@@ -83,6 +83,7 @@ export class Analysis {
 
   // ---------------------------------------------------------------- activation
   activate(params) {
+    this.active = true;
     // While you play Kairos, analysis here would take CPU from the engine: off unless asked.
     this.suppressed = this.engineOn && this.playing();
     this.input.attach(this.source);
@@ -149,8 +150,10 @@ export class Analysis {
   }
 
   deactivate() {
+    this.active = false;
     this.stopAutoplay();
     this.engine.stop();
+    this.searching = null;
     // Keep a turn the user gave the board here for when Analysis is shown again.
     this.flipped = this.board.flipped;
   }
@@ -637,6 +640,13 @@ export class Analysis {
    * it afresh from depth 1 (a Lines change) instead of resuming the engine's last search of it.
    */
   restartEngine({ restart = false } = {}) {
+    // Off the Analysis page nothing searches for it (a setting changed, a game loaded from another
+    // page): activate points the engine at the position again. The engine is another page's now,
+    // so it is left alone.
+    if (!this.active) {
+      this.searching = null;
+      return;
+    }
     if (this.suppressed && !this.playing()) this.suppressed = false;
     if (!this.engineOn || this.suppressed || !this.tree) {
       this.engine.stop();
