@@ -1016,7 +1016,10 @@ export class Editor {
       line('muted', `${nTl} timeline${nTl === 1 ? '' : 's'}${nActive < nTl ? `, ${nActive} active` : ''} · ${m.w}×${m.h}`);
       if (v.status === 'checkmate') line('warn', `Checkmate: ${sideName(v.player !== 0)} wins.`);
       else if (v.status === 'stalemate') line('warn', 'Stalemate: no legal action, and no check.');
-      else if (v.status === 'whiteExiled' || v.status === 'blackExiled') line('warn', 'Game over: a side\'s royals are all exiled.');
+      else if (v.status === 'exiled-white' || v.status === 'exiled-black') {
+        const loser = sideName(v.status === 'exiled-white');
+        line('warn', `${loser} is stalemated, with no king on an active timeline: ${sideName(v.status !== 'exiled-white')} wins.`);
+      }
       else if (v.checks.length) line('warn', `${side} is in check.`);
       playable = !r.capture && (!v.status || v.status === 'playing' || v.status === 'unknown');
       if (r.capture) line('bad', `${side} could capture a royal piece at once: ${sideName(v.player !== 0)} left it in check, which cannot happen in a game.`);

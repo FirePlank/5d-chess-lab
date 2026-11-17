@@ -52,7 +52,7 @@ function markCompleted(id) {
 const RESULT_TEXT = {
   checkmate: (w) => `${w} wins by checkmate.`,
   resignation: (w) => `${w} wins by resignation.`,
-  exiled: (w) => `${w} wins: every enemy king is exiled.`,
+  exiled: (w) => `${w} wins: ${w === 'White' ? 'Black' : 'White'} is stalemated, with no king on an active timeline.`,
   stalemate: () => 'Draw by stalemate.',
 };
 

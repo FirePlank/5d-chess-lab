@@ -49,8 +49,11 @@ const NOTICES = {
 export function resultText(result, termination) {
   if (result === '*' || termination === 'aborted') return 'Game aborted';
   const winner = result === '1-0' ? 'White' : result === '0-1' ? 'Black' : null;
+  // Exiled kings: the loser, stalemated, has no king on an active timeline (the winner exiles
+  // nothing).
+  if (termination === 'exiled' && winner) return `${winner} wins: ${winner === 'White' ? 'Black' : 'White'} is stalemated, with no king on an active timeline.`;
   const label = {
-    checkmate: 'checkmate', exiled: 'exiling every king', time: 'time forfeit', resignation: 'resignation',
+    checkmate: 'checkmate', time: 'time forfeit', resignation: 'resignation',
     disconnect: 'abandonment', stalemate: 'stalemate', agreement: 'agreement', abandonment: 'abandonment',
   }[termination] || termination;
   return winner ? `${winner} wins by ${label}.` : `Draw by ${label}.`;
