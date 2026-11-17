@@ -86,9 +86,10 @@ export class Tutorial {
   activate(params) {
     this.active = true;
     this.input.attach(this.source);
-    this.board.setFlipped(false);
     const id = params && params.get('lesson');
     const i = LESSONS.findIndex((l) => l.id === id);
+    // A lesson played as Black (`flip`) shows the board from Black's side.
+    this.board.setFlipped(i >= 0 && !!LESSONS[i].flip);
     if (i < 0) {
       this.openList();
       this.board.setView(this.rules.call({ cmd: 'view', node: 0, draft: [] }).view);
@@ -202,7 +203,7 @@ export class Tutorial {
     const last = this.lesson === LESSONS.length - 1;
     const box = $('#tut-done');
     box.replaceChildren(
-      el('div', { class: 'tut-done-head' }, el('strong', { text: last ? 'You know the rules of 5D chess!' : 'Lesson complete!' }), stars(n, 'big')),
+      el('div', { class: 'tut-done-head' }, el('strong', { text: last ? 'You finished every lesson!' : 'Lesson complete!' }), stars(n, 'big')),
       el('ul', { class: 'tut-recap' }, ...this.cur.recap.map((r) => el('li', { text: r }))),
       last ? el('div', { class: 'tut-grad' },
         el('p', { class: 'muted', text: 'Where to next:' }),

@@ -12,10 +12,12 @@
 // boards '(0T2w)', squares '(0T2w)a3', arrows '(0T3)a3>(0T2)a3' (the side to move's move),
 // threats (red arrows, the other side's), and voids: places with no board. Text: **bold**.
 // tests/tutorial.mjs holds every step to: no check and every timeline active as it opens,
-// unless the step says `check` or `inactive`.
+// unless the step says `check` or `inactive`. A lesson with `flip` is played as Black.
 
+/** A position of any size ('7x7', or '6x6 even') from its boards ('fen:l:t:c'). */
+const sized = (size, ...boards) => `size ${size} fen ${boards.map((b) => `[${b}]`).join(' ')}`;
 /** A 5×5 position from its boards ('fen:l:t:c'). */
-const small = (...boards) => `size 5x5 fen ${boards.map((b) => `[${b}]`).join(' ')}`;
+const small = (...boards) => sized('5x5', ...boards);
 
 // The opening position of the time lessons: a rook and king each.
 const ROOKS = small('1r2k/5/5/5/R3K:0:1:w');
@@ -75,6 +77,45 @@ const FAIRY_BRAWN = small('4k/5/3n1/5/K4:-1:1:w', '4k/5/2W2/5/K4:0:1:w');
 // one rank forward and one turn back.
 const FAIRY_BRAWN_TIME = small('4k/2n2/2W2/5/K4:0:1:w', '4k/2n2/2W2/5/1K3:0:1:b', '3k1/2n2/2W2/5/1K3:0:2:w');
 
+// Openings and tactics: positions and games from Los Bro SPQR's tactics guide (5DCH). Kairos
+// checked the f7 lines (depth 10-14): after 5...Kxf7 White is about +3; Black's only way out of
+// the first pattern's mate is a travel (a softmate), and it is still mate in 3.
+const T0 = 'Standard - Turn Zero';
+/** The moves of a game as a lesson line: each action, then submit. */
+const line = (...actions) => actions.map((a) => `${a} submit`).join(' ');
+// The f7 sac's usual setup: queen on b3 and bishop on b5, both aiming at f7.
+const F7_SETUP = line('(0T1)e2e3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)g7g6', '(0T3)d1b3', '(0T3)e7e6', '(0T4)f1b5', '(0T4)c7c6');
+const F7_TAKEN = `${F7_SETUP} ${line('(0T5)b3(0T1)f7', '(1T1)e8f7')}`;
+// The first pattern, up to the queen's check on b3 (mate on L1's board).
+const F7_SOFTMATE = `${F7_TAKEN} ${line('(1T2)g1h3', '(1T2)g8f6', '(1T3)h3g5', '(1T3)f7e8', '(1T4)c2c3', '(1T4)d7d5', '(1T5)d1b3')}`;
+// Defences: d5 on the queen's path; the queen on b6, ready to defend (or to counter on f2).
+const F7_BLOCKED = line('(0T1)g1f3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)d7d5', '(0T3)d1b3', '(0T3)c7c6', '(0T4)d2d4', '(0T4)c8f5');
+const F7_PARALLEL = line('(0T1)g1f3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)e7e6', '(0T3)d1b3', '(0T3)c7c6', '(0T4)d2d4', '(0T4)d8b6',
+  '(0T5)b3(0T1)f7', '(1T1)e8f7', '(1T2)g1h3', '(1T2)g8f6', '(1T3)h3g5', '(1T3)f7e8', '(1T4)c2c3');
+const F7_DANRELLE = line('(0T1)g1f3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)c7c6', '(0T3)d1b3', '(0T3)d8b6', '(0T4)d2d4', '(0T4)d7d5',
+  '(0T5)b3(0T1)f7', '(1T1)e8f7', '(1T2)g1h3', '(1T2)e7e6', '(1T3)e2e3', '(1T3)d8h4', '(1T4)d1f3');
+// Self recapture: the black bishop on e3 can reach back to its own past square.
+const SELF_RECAPTURE = small('4k*/p*4/4b/P*4/1K*2N:0:1:w', '4k*/p*4/4b/P*4/K*3N:0:1:b', '4k*/5/p3b/P*4/K*3N:0:2:w');
+const STALL_CHECK = sized('7x7', '3B1k*1/3p*p*1p*/5p1/n6/1p2NnN/p1p4/2K*4:0:1:w');
+const DOOR = line('(0T1)e2e3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)d7d5', '(0T3)g1f3', '(0T3)c8f5');
+const PHASING = sized('7x7', '7/p*p*p*kp*1p*/5p1/3P3/4PP1/P*P*B3P*/1K*5:0:1:w');
+const PHASING_OPEN = line('(0T1)f3f4', '(0T1)a6a5', '(0T2)d4d5', '(0T2)c6c5');
+// Tchaikovsky: Black castled on turn 1; White's bishop reached g5 since.
+const TCHAIKOVSKY = sized('8x8', 'r*nb1k*2r*/p*p*1p*1p*p*p*/2p1p3/8/3P4/2P2N2/P*P*2P*P*P*P*/R*1B1K*2R*:0:0:b');
+const TCHAIKOVSKY_CASTLED = line('(0T0)a7a5', '(0T1)a2a3', '(0T1)e8g8', '(0T2)c1g5', '(0T2)b7b6');
+const TCHAIKOVSKY_FORCED = sized('6x6', 'r*2r*k*1/p*2p*bp*/1p2p1/1P4/P*BP*3/1K*R*1N1:0:1:w');
+const TCHAIKOVSKY_AUTO = sized('7x7', '1r*1k*3/p*1p*1p*p*q/2Qp1n1/7/2PP3/P*1B1P*P*P*/R*2K*2R*:0:1:w');
+const TCHAIKOVSKY_MATE2 = sized('7x7', '3KB2/q1P1P2/2PP3/b2Q1B1/p2p1p1/1pp1p2/3knb1:0:1:w');
+const TCHAIKOVSKY_DOUBLE = sized('7x7', 'r*2k*b2/1p*p*1p*2/3p3/n6/2BbQC1/P*P*q3P*/K*5N:0:1:w');
+const SMOTHERED = sized('6x6', '1qr*1nk*/p*p*2p*p*/6/2PN2/P*P*4/K*1B3:0:1:w', '1qr*1nk*/p*p*2p*p*/6/2PNB1/P*P*4/K*5:0:1:b', '2r*1nk*/p*p*2p*p*/6/2PNq1/P*P*4/K*5:0:2:w');
+// Time trap: two even timelines (+0 and -0).
+const TIME_TRAP = sized('6x6 even', '1k*1n2/p*p*p*p*2/6/3Q2/P*P*P*3/1K*4:+0:1:w', '1k*4/p*p*p*1p*q/5p/3Nq1/P*P*P*2n/1K*4:-0:1:w');
+const TIME_TRAP_QUEEN = sized('6x6 even', '1k*4/1p*p*3/3p2/1P4/P*1P*3/1K*N3:+0:1:w', '3k*2/2p*1p*1/3pq1/BP4/P*1P*3/1K*4:-0:1:w');
+// Four timelines; the white queen on L1 sees e7 of L−1 along a diagonal through timelines.
+const DIAGONALS = sized('8x8', 'r*2qk*b2/b1p*p*1p*p*p*/p3pn2/1pQ5/8/1P2P3/P*2P*1P*P*P*/R*N2K*BNR*:0:1:w', 'r*2qk*b2/b1p*p*1p*p*p*/p3p1n1/1pQ5/8/1P2P2N/P*2P*1P*P*P*/R*N2K*B1R*:0:1:b',
+  'r*2qk*b2/2p*p*1p*p*1/p3p1np/1pb5/8/1P2P2N/P*2P*1P*P*P*/R*N2K*B1R*:0:2:w', 'r*2qk*b2/2p*p*p*p*p*p*/p4n2/1p6/8/1P2P3/P*2P*1P*P*P*/R*N2K*BNR*:-1:1:w',
+  'r*2qk*b2/2p*p*p*p*p*p*/p4n2/1pQ5/8/1P2P3/P*2P*1P*P*P*/R*N2K*BNR*:1:1:w', 'r*2qk*b2/2p*p*p*p*p*p*/p4n2/1pQ5/8/1P2P3/P*2P*1P*P*P*/R*N2K*BNR*:-2:1:w');
+
 /** Goals: each judges a submitted action ({moves, before, after}): true, or why not. */
 export const goals = {
   /** Any complete action. */
@@ -93,7 +134,9 @@ export const CATEGORIES = [
   { key: 'multiverse', name: 'The multiverse', blurb: 'How boards, time and timelines work: the rules of the board itself.' },
   { key: 'pieces', name: 'The pieces', blurb: 'How each piece moves through the four dimensions.' },
   { key: 'fundamentals', name: 'Fundamentals', blurb: 'Check, checkmate and stalemate across time.' },
-  { key: 'advanced', name: 'Advanced', blurb: 'The fairy pieces of the 5D game’s variants.' },
+  { key: 'openings', name: 'Openings', blurb: 'The f7 sac: the opening trap every player must know, and how to stop it.' },
+  { key: 'tactics', name: 'Tactics', blurb: 'The 5D tactics players name: Tchaikovskys, closing the door, phasing and more.' },
+  { key: 'advanced', name: 'Fairy pieces', blurb: 'The fairy pieces of the 5D game’s variants.' },
 ];
 
 export const LESSONS = [
@@ -710,7 +753,447 @@ export const LESSONS = [
     ],
   },
 
-  // ------------------------------------------------------------------ advanced
+  // ------------------------------------------------------------------ openings
+  {
+    id: 'f7sac', title: 'The f7 sac', blurb: 'A queen in the past, on Black’s weakest square.', category: 'openings',
+    recap: [
+      'On turn 1 nothing but the king guards f7. A queen or bishop that travels there gives check.',
+      'The king must take, and the game goes back to turn 1 on a new timeline, with every Black piece still at home.',
+      'You then attack on that timeline alone until the present catches up: knight h3 and g5, then the queen.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [T0, F7_SETUP],
+        say: 'A common opening. Your queen on b3 and bishop on b5 both aim at **f7**. This is the setup for the **f7 sac**.',
+        mark: { squares: ['(0T5w)b3', '(0T5w)b5'] },
+      },
+      {
+        type: 'choose',
+        say: 'Your queen can travel back to f7 of **turn 1**, four turns ago. What guards f7 on that board?',
+        mark: { arrows: ['(0T5)b3>(0T1)f7'], squares: ['(0T1w)f7'] },
+        options: ['Only the king', 'The king and a knight', 'Nothing at all'], answer: 0,
+        ok: 'On turn 1 Black hasn’t moved a piece yet. Undeveloped boards are where the f7 sac strikes.',
+      },
+      {
+        type: 'play', say: 'Capture on **f7** of turn 1 with your queen.',
+        mark: { arrows: ['(0T5)b3>(0T1)f7'] },
+        solution: '(0T5)b3(0T1)f7', reply: '(1T1)e8f7',
+        wrong: 'Your queen on b3 goes four turns back, to f7 on turn 1.',
+        ok: 'Check, so the king had to take. A new timeline, L1, starts on turn 1 with Black’s king pulled out.',
+      },
+      {
+        type: 'choose',
+        say: 'The present is on **turn 2**, on L1. Must you also play your L0 board on turn 5?',
+        mark: { boards: ['(1T2w)'] },
+        options: ['Yes, every turn', 'No: it is ahead of the present'], answer: 1,
+        ok: 'L0 waits until the present catches up. Until then every move is on L1, against an exposed king.',
+      },
+      {
+        type: 'play', say: 'Knight to **h3**, heading for g5. (Not f3: your queen needs f3 and h5 free.)',
+        solution: '(1T2)g1h3', reply: '(1T2)g8f6',
+        wrong: 'The knight on g1 of L1 goes to h3.',
+        ok: 'Black brought a knight out. Now check.',
+      },
+      {
+        type: 'play', say: 'Check from **g5**.',
+        solution: '(1T3)h3g5', reply: '(1T3)f7e8',
+        wrong: 'Your knight on h3 jumps to g5, attacking f7 and the king.',
+        ok: 'The king ran back to e8.',
+      },
+      {
+        type: 'play', say: 'Push **c3**: it frees c2, the path of your queen from d1 to b3.',
+        solution: '(1T4)c2c3', reply: '(1T4)d7d5',
+        wrong: 'Push the c2 pawn of L1 one square.',
+        ok: 'One more move.',
+      },
+      {
+        type: 'play', say: 'Queen to **b3**, with check. Can the king go anywhere on this board?',
+        solution: '(1T5)d1b3',
+        wrong: 'Your queen on d1 of L1 goes to b3.',
+        ok: 'No square left on L1: the board is mated. But Black has one escape left, through time. That’s the next lesson.',
+      },
+    ],
+  },
+  {
+    id: 'f7sac2', title: 'The f7 sac: a second pattern', blurb: 'Knight h3, queen f3, knight f4.', category: 'openings',
+    recap: [
+      'After the f7 sac, the knight goes to h3, not f3, to leave the queen f3 and h5.',
+      'If Black opens the e-pawn first, check on the diagonal at once: queen f3, then knight f4.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [T0, F7_TAKEN],
+        say: 'The same sac, the king back on f7 of L1. This time Black will push **e6** early. Watch the diagonal to the king.',
+        mark: { squares: ['(1T2w)f7'] },
+      },
+      {
+        type: 'play', say: 'Knight to **h3** again.',
+        solution: '(1T2)g1h3', reply: '(1T2)e7e6',
+        wrong: 'The knight on g1 of L1 goes to h3.',
+        ok: 'Black pushed e6.',
+      },
+      {
+        type: 'play', say: 'Push your **e** pawn one square, so your queen can reach f3.',
+        solution: '(1T3)e2e3', reply: '(1T3)g7g6',
+        wrong: 'The pawn on e2 of L1 goes to e3.',
+        ok: 'Now the diagonal.',
+      },
+      {
+        type: 'play', say: 'Check from **f3**, straight at the king on f7.',
+        solution: '(1T4)d1f3', reply: '(1T4)d8f6',
+        wrong: 'Your queen on d1 of L1 goes to f3.',
+        ok: 'Black blocked with its queen.',
+      },
+      {
+        type: 'play', say: 'Knight to **f4**. Does the king have a square left on this board?',
+        solution: '(1T5)h3f4',
+        wrong: 'Your knight on h3 goes to f4.',
+        ok: 'None: L1’s board is mated again. Both patterns end the same way, with Black needing an escape through time.',
+      },
+    ],
+  },
+  {
+    id: 'softmate', title: 'Softmate', blurb: 'A mate that time can delay, and how to finish it.', category: 'openings',
+    recap: [
+      'A softmate is mate on one board that the defender delays by travelling: the present goes back, and the mated board waits.',
+      'Each escape makes a new timeline, often another undeveloped board. Sac on f7 again there.',
+      'Kairos rates the f7 sac about +3 for White, and the first pattern’s softmate is mate in 3.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [T0, F7_SOFTMATE], then: '(0T5)f6(0T3)f5',
+        say: 'The first pattern’s mate. But Black’s knight on L0 jumped two turns back, making timeline **L−1**.',
+        mark: { boards: ['(-1T4w)'] },
+      },
+      {
+        type: 'choose', say: 'The present is back on **turn 4**. Must Black answer the check on L1 now?',
+        mark: { boards: ['(1T5b)'] },
+        options: ['Yes, at once', 'No: L1 is ahead of the present, so it waits'], answer: 1,
+        ok: 'Mate on a board that a travel can delay is a **softmate**. It isn’t over: the travel gave you a new board.',
+      },
+      {
+        type: 'play', say: 'L−1 is another early board, with your queen on b3 and f7 guarded only by the king. Sac on **f7** again!',
+        solution: '(-1T4)b3f7', reply: '(-1T4)e8f7',
+        wrong: 'Your queen on b3 of L−1 takes on f7, on the same board.',
+        ok: 'The king took again.',
+      },
+      {
+        type: 'play', say: 'Check with your bishop from **c4**.',
+        solution: '(-1T5)f1c4', reply: '(-1T5)f7(0T4)g7',
+        wrong: 'Your bishop on f1 of L−1 goes to c4.',
+        ok: 'The king fled into the past: to g7 of L0, turn 4, making another timeline.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Find the mate on the timeline the king just made.',
+        mark: { boards: ['(-2T5w)'] },
+        solution: '(-2T5)b5d7',
+        ok: 'Checkmate! Softmates are won like this: every escape into the past makes a board you can attack again.',
+      },
+    ],
+  },
+  {
+    id: 'f7defence', title: 'Stopping the f7 sac', blurb: 'Block the path, defend from L0, or strike back.', category: 'openings', flip: true,
+    recap: [
+      'Block the path: a pawn on d5 (or a piece) on the queen’s route back in time stops the sac before it starts.',
+      'Parallel defence: bring a piece from L0 to guard the mating square on L1.',
+      'Counter-travel: let White attack, and mate first through time. The Danrelle mates on f2.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [T0, F7_BLOCKED],
+        say: 'You play Black now. White’s queen on b3 eyes f7. But your pawn went to **d5** on turn 2.',
+        mark: { squares: ['(0T3w)d5'], arrows: ['(0T5)b3>(0T1)f7'] },
+      },
+      {
+        type: 'choose', say: 'The queen’s path back to f7 of turn 1 crosses d5 on turn 3. Can it still get there?',
+        mark: { squares: ['(0T3w)d5'] },
+        options: ['Yes, it jumps over', 'No: d5 blocks the path'], answer: 1,
+        ok: 'Defence one: **block the path**. Most opening theory is about this: keep a piece on the route back.',
+      },
+      {
+        type: 'play', at: [T0, F7_PARALLEL],
+        say: 'White sacked on f7 and threatens **Qb3**, mating your king on L1. Bring your L0 queen to **b5** on L1, guarding b3.',
+        mark: { squares: ['(1T4b)b3'] },
+        solution: '(0T5)b6(1T4)b5',
+        wrong: 'Your queen on b6 of L0 goes one turn back and one timeline down, to b5.',
+        ok: 'Defence two: a **parallel defence**. A piece from another timeline guards the mating square.',
+      },
+      {
+        type: 'play', at: [T0, F7_DANRELLE], check: true, goal: goals.mate(),
+        say: 'White’s queen checks you from f3. Don’t defend: your queen on b6 can reach **f2** of turn 1. Mate!',
+        solution: '(0T5)b6(0T1)f2',
+        ok: 'The **Danrelle**: Black let White attack, then mated first, through time. Risky, and it needs theory.',
+      },
+    ],
+  },
+
+  // ------------------------------------------------------------------ tactics
+  {
+    id: 'selfcapture', title: 'Self recapture', blurb: 'A piece captured in the past can take back from the future.', category: 'tactics',
+    recap: [
+      'Capture a piece in the past, and its future self may capture back: a self recapture.',
+      'Timing decides it. Travel a distance its future self can’t match, and it can’t reach back.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [SELF_RECAPTURE],
+        say: 'Your knight can travel back and take the black bishop on **e3** of turn 1, with check. Try it.',
+        mark: { arrows: ['(0T2)e1>(0T1)e3'] },
+        solution: '(0T2)e1(0T1)e3', reply: '(0T2)e3(1T1)e3',
+        wrong: 'Your knight on e1 goes two ranks up and one turn back.',
+        ok: 'The bishop’s **future self** on L0 took back: one turn back, one timeline down. A **self recapture**.',
+      },
+      {
+        type: 'choose', at: [SELF_RECAPTURE], predict: true,
+        say: 'What if your knight travelled **two** turns back instead of one?',
+        options: ['The bishop could still take back', 'The bishop could not: two turns and one timeline isn’t a bishop move'], answer: 1,
+        ok: 'Right. Let’s set it up: first move the knight.',
+      },
+      {
+        type: 'play', say: 'Check from **d3**.',
+        solution: '(0T2)e1d3', reply: '(0T2)e5e4',
+        wrong: 'Your knight on e1 jumps to d3.',
+        ok: 'The king stepped to e4.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Now take the bishop on e3 of turn 1: two turns back. Mate in one.',
+        solution: '(0T3)d3(0T1)e3',
+        ok: 'Checkmate. The bishop’s future self can’t reach back: timing made the capture safe.',
+      },
+    ],
+  },
+  {
+    id: 'stallcheck', title: 'Stall checks', blurb: 'Checks that make the boards a tactic needs.', category: 'tactics',
+    recap: [
+      'Some tactics need boards that don’t exist yet: a travel needs a past to land in.',
+      'Checks force replies and add boards, even at the cost of a piece. Then the travel works.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [STALL_CHECK],
+        say: 'Turn 1: there is no past yet. Your bishop on d7 could check the king **through time**, if there were boards two turns back.',
+        mark: { squares: ['(0T1w)d7', '(0T1w)f7'] },
+      },
+      {
+        type: 'play', say: 'Make those boards with a check, even at the cost of a knight: **Nxf5+**.',
+        solution: '(0T1)e3f5', reply: '(0T1)g6f5',
+        wrong: 'Your knight on e3 takes on f5.',
+        ok: 'Black had to take. The game now has a past.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Mate in one: the other knight checks, and your bishop guards the king’s escape into the past.',
+        solution: '(0T2)g3f5',
+        ok: 'Checkmate! Your bishop also checks the king’s self of turn 1, two turns back: that needed the board the sacrifice made.',
+      },
+    ],
+  },
+  {
+    id: 'door', title: 'Closing the door', blurb: 'Block the attack on your piece, not its path.', category: 'tactics',
+    recap: [
+      'A piece set up for a travel often gets attacked before the travel works.',
+      'Close the door: block that attack with another piece, without blocking the travel’s path.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [T0, DOOR],
+        say: 'Check with your queen from **a4**.',
+        solution: '(0T4)d1a4', reply: '(0T4)f5d7',
+        wrong: 'Your queen on d1 goes to a4.',
+        ok: 'Black blocked with its bishop, which now attacks your queen.',
+      },
+      {
+        type: 'choose', say: 'Your queen could check the king’s past self on e8 through time. But Bd7 attacks it. What now?',
+        mark: { threats: ['(0T5w)d7>(0T5w)a4'] },
+        options: ['Move the queen away', 'Block the bishop with another piece'], answer: 1,
+        ok: 'Blocking keeps the queen where it is. That’s **closing the door**.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Close the door with your bishop. Mate in one.',
+        solution: '(0T5)f1b5',
+        ok: 'Checkmate: Bb5 shuts the bishop out, and your queen checks the king four turns back, its path still open.',
+      },
+    ],
+  },
+  {
+    id: 'phasing', title: 'Phasing', blurb: 'Travel through a square a pawn just left.', category: 'tactics',
+    recap: [
+      'A bishop or queen travelling back in time crosses earlier boards, square by square.',
+      'When a pawn moves off that path, it opens for one turn: the piece seems to phase through it.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [PHASING, PHASING_OPEN],
+        say: 'Your bishop on c2 could check the king’s past self on d6 by moving up the board and back in time at once.',
+        mark: { squares: ['(0T3w)c2', '(0T1w)d6'] },
+      },
+      {
+        type: 'choose', say: 'Its path crosses d4 and d5 on earlier boards. Your pawn just left d4. Does that matter?',
+        options: ['No, pawns never block travels', 'Yes: it opened the path, for a turn'], answer: 1,
+        ok: 'The window is open only now. Next turn, the path runs through boards where the pawn still blocks.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Phase through: mate in one.',
+        solution: '(0T3)c2d3',
+        ok: 'Checkmate, through the gap the pawn left. That’s **phasing**.',
+      },
+    ],
+  },
+  {
+    id: 'tchaikovsky', title: 'Tchaikovsky', blurb: 'Check where the king is about to go.', category: 'tactics',
+    recap: [
+      'A Tchaikovsky travels to the turn before a king moved, beside the square it moved to, so it checks across timelines and the king can’t take it.',
+      'It often comes after castling, or after you force the king to move.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [TCHAIKOVSKY, TCHAIKOVSKY_CASTLED], goal: goals.mate(),
+        say: 'Black castled on turn 1. Your bishop can travel to **g7** of turn 1, next to where the king went. Mate in one.',
+        mark: { squares: ['(0T2b)g8'] },
+        solution: '(0T3)g5(0T1)g7',
+        ok: 'A **Tchaikovsky**. Castling is risky in 5D: guard the pawns first, or fianchetto.',
+      },
+      {
+        type: 'play', at: [TCHAIKOVSKY_FORCED],
+        say: 'No castling here? Force the king to move. Sacrifice your bishop on **e5**, with check.',
+        solution: '(0T1)b2e5', reply: '(0T1)e6e5',
+        wrong: 'Your bishop on b2 takes on e5.',
+        ok: 'The king took, and now stands on e5.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Now send your knight back to turn 1, before the king moved, where it attacks the king’s new square. Mate in one.',
+        solution: '(0T2)e1(0T1)e3',
+        ok: 'Checkmate! From the new timeline the knight checks the king on e5 across timelines, where the king can’t take it.',
+      },
+      {
+        type: 'play', at: [TCHAIKOVSKY_MATE2], say: 'Your turn, no hints on the board. Mate in two: first force the king to move.',
+        solution: '(0T1)f4d2', reply: '(0T1)d1d2',
+        wrong: 'Look for a check that the king has to answer by capturing.',
+        ok: 'The king took on d2.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Finish it.',
+        solution: '(0T2)d4(0T1)e3',
+        ok: 'A Tchaikovsky with your queen.',
+      },
+    ],
+  },
+  {
+    id: 'tchaikovsky2', title: 'Auto and double Tchaikovsky', blurb: 'Sacrifice to pull the king in, then travel.', category: 'tactics',
+    recap: [
+      'Auto Tchaikovsky: sacrifice a piece to pull the king out, then travel back to where that same piece checks it.',
+      'As long as the sacrifice isn’t taken back, the travel can wait: any turn that still reaches the board works.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [TCHAIKOVSKY_AUTO], say: 'Sacrifice your queen on **c6**, with check.',
+        solution: '(0T1)c5c6', reply: '(0T1)d7c6',
+        wrong: 'Your queen on c5 takes on c6.',
+        ok: 'The king took the queen.',
+      },
+      {
+        type: 'play', say: 'Check again from **a4**, with the bishop.',
+        solution: '(0T2)c2a4', reply: '(0T2)c6d6',
+        wrong: 'Your bishop on c2 goes to a4.',
+        ok: 'The king stepped to d6.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Send your bishop back to turn 1, taking on **a6**. On the timeline that makes, your queen is still alive. Mate in one.',
+        solution: '(0T3)a4(0T1)a6',
+        ok: 'An **auto Tchaikovsky**: on the new timeline the queen you sacrificed checks the king across timelines.',
+      },
+      {
+        type: 'play', at: [TCHAIKOVSKY_DOUBLE], say: 'Mate in three, no hints: pull the king out twice.',
+        solution: '(0T1)e3e6', reply: '(0T1)d7e6',
+        wrong: 'Start with a sacrifice that gives check.',
+        ok: 'The king took.',
+      },
+      {
+        type: 'play', say: 'Again.',
+        solution: '(0T2)c3e5', reply: '(0T2)e6e5',
+        wrong: 'Another check that the king must take.',
+        ok: 'The king took again.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Finish it with the common king.',
+        solution: '(0T3)f3(0T2)f4',
+        ok: 'A **double Tchaikovsky**.',
+      },
+    ],
+  },
+  {
+    id: 'smothered', title: '5D smothered mate', blurb: 'A king boxed in through every dimension.', category: 'tactics',
+    recap: [
+      'A smothered mate in 5D: the king’s own pieces block it in every dimension, and a knight checks.',
+      'A knight two turns back works best: one turn back, the king can often escape into the future.',
+    ],
+    steps: [
+      {
+        type: 'choose', at: [SMOTHERED],
+        say: 'Black’s king on f6 is surrounded by its own pieces. Can it escape through time or across timelines?',
+        mark: { squares: ['(0T2w)f6'] },
+        options: ['Yes, into the past', 'Not if the check comes from the right board'], answer: 1,
+        ok: 'Let’s find that check.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Mate in one with your knight.',
+        solution: '(0T2)d3(0T1)d5',
+        ok: 'Checkmate: smothered in all four dimensions.',
+      },
+    ],
+  },
+  {
+    id: 'timetrap', title: 'Time trap', blurb: 'Freeze a timeline with a check.', category: 'tactics',
+    recap: [
+      'With several timelines, a check on one freezes it: the defender has to answer there.',
+      'Use the turn you gain on another timeline, where the defence can’t be set up in time.',
+    ],
+    steps: [
+      {
+        type: 'play', at: [TIME_TRAP], say: 'Two timelines. Check with your knight on −0 (**Nb4**), and take on **d5** with your queen on +0.',
+        solution: '(-1T1)d3b4 (0T1)d3d5', reply: '(0T1)d6c4 (-1T1)a5b4',
+        wrong: 'The knight on d3 of −0 goes to b4; the queen on d3 of +0 takes on d5.',
+        ok: 'Black had to spend its −0 move on the check, and couldn’t defend anything else.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Now travel with your queen to the timeline Black couldn’t defend. Mate in one.',
+        solution: '(0T2)d5(-1T1)d6',
+        ok: 'Checkmate. The check on −0 trapped that timeline, so its defence never came.',
+      },
+      {
+        type: 'play', at: [TIME_TRAP_QUEEN], say: 'Another one: win the black queen. Trap −0 with a check, and bring your knight to **e2** on +0.',
+        solution: '(-1T1)a3c5 (0T1)c1e2', reply: '(0T1)b6c6 (-1T1)d6c5',
+        wrong: 'Your bishop takes on c5 on −0, with check; the knight on c1 of +0 goes to e2.',
+        ok: 'The king took your bishop. Now the queen.',
+      },
+      {
+        type: 'play', say: 'Your knight can now take the queen on −0, travelling across timelines.',
+        solution: '(0T2)e2(-1T2)e4',
+        wrong: 'Your knight on e2 of +0 jumps to e4 on −0.',
+        ok: 'The queen is gone, with check.',
+      },
+    ],
+  },
+  {
+    id: 'diagonals', title: 'Long diagonals', blurb: 'Lines through many timelines at once.', category: 'tactics',
+    recap: [
+      'With many timelines, diagonals run through boards above and below: a queen can reach a king several timelines away.',
+      'They are easy to miss: keep an eye on every king’s lines through timelines, not only on its board.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [DIAGONALS],
+        say: 'Four timelines. Look at the queen on **c5** of L1 and the black king on L−1.',
+        mark: { squares: ['(1T1w)c5', '(-1T1w)e8'] },
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Mate in one: you play two boards. One queen move keeps the king from escaping, the other attacks diagonally through timelines.',
+        solution: '(-2T1)c5e5 (1T1)c5(-1T1)e7',
+        ok: 'Checkmate, along a diagonal through timelines. Those lines get longer with every new timeline.',
+      },
+    ],
+  },
+
+  // ------------------------------------------------------------------ fairy pieces
   {
     id: 'fairy', title: 'Fairy pieces', blurb: 'Princess, unicorn, dragon and brawn.', piece: 'unicorn', category: 'advanced',
     recap: [
