@@ -30,6 +30,8 @@ const MAX_ANIMATED = 12;
 const CAMERA_RATE = 16;
 const easeOut = (p) => 1 - (1 - p) ** 3;
 const easeIn = (p) => p * p * p;
+/** A check's identity within a position (its attacker's square and the royal's). */
+const checkKey = (ch) => `${ch.from.join(',')}>${ch.to.join(',')}`;
 
 /** Parse a board FEN (rows top to bottom, `*` after unmoved pieces) into a W*H array. */
 export function parseFen(fen, w, h) {
@@ -96,8 +98,8 @@ export class MultiverseView {
     this.leaving = []; // {b, t0, dur, dy, off, alpha}: boards sliding out
     this.lastStep = 0;
     this.overlay = { selected: null, targets: [], pv: [], hint: [], hover: null, readonly: false, lesson: null };
-    // Checks: timelines whose "!" badge was clicked (their checks are shown), the badges drawn
-    // last frame (for clicks), and the badge under the pointer.
+    // Checks: those shown by clicking a "!" badge (by `checkKey`), the badges drawn last frame
+    // (for clicks), and the badge under the pointer.
     this.revealed = new Set();
     this.badges = [];
     this.hoverBadge = null;
@@ -317,7 +319,9 @@ export class MultiverseView {
     this.timelines = new Map(view.timelines.map((tl) => [tl.l, tl]));
     if (!prev || prev.size[0] !== w || prev.size[1] !== h || !this.fitted) {
       if (this.w) this.fit(false, true);
-    } else if (follow) {
+    } else if (follow && prev.position !== view.position) {
+      // Only a new position moves the camera: a page redrawing the same one (a clock, the server
+      // confirming an action already shown, a realtime resync) leaves it where the user put it.
       this.followAction();
     }
     this.redraw();
@@ -382,6 +386,9 @@ export class MultiverseView {
    * boards that must be played next, as 5dcol does. The camera zooms out as far as needed to
    * fit them (never in) and centres on them; when they cannot all be shown at a readable size,
    * it shows the boards the action made. Nothing moves when they are all in view already.
+   * Boards after the present are left out: an action that travelled back and moved the present
+   * with it made one board where it left, now in the future, and framing it would take in every
+   * board between the present and there.
    */
   followAction() {
     const v = this.view;
@@ -401,9 +408,10 @@ export class MultiverseView {
     const present = 2 * v.present + v.player;
     const next = v.timelines.filter((tl) => tl.status === 'mandatory').map((tl) => [tl.l, present]);
     const has = (b) => this.boards.has(`${b[0]},${b[1]}`);
-    const sets = [[...made, ...next].filter(has), made.filter(has), next.filter(has)];
+    const shown = made.filter((b) => has(b) && b[1] <= present);
+    const sets = [[...shown, ...next].filter(has), shown, next.filter(has)];
     for (const set of sets) if (set.length && this.showBoards(set)) return;
-    const last = made.filter(has).pop();
+    const last = shown.pop() || made.filter(has).pop();
     if (last) this.showBoards([last], true);
   }
 
@@ -573,12 +581,14 @@ export class MultiverseView {
       } else if (down && !down.moved && e.type === 'pointerup' && down.button === 0) {
         const badge = this.badgeAt(e.offsetX, e.offsetY);
         if (badge != null) {
-          // The "!": show (or hide again) that timeline's check.
-          if (this.revealed.has(badge)) this.revealed.delete(badge);
+          // The "!": show (or hide again) that timeline's checks. Another badge standing for the
+          // same checks turns with it.
+          const checks = this.badgeChecks(badge);
+          if (this.badgeOn(badge)) for (const ch of checks) this.revealed.delete(checkKey(ch));
           else {
-            this.revealed.add(badge);
+            for (const ch of checks) this.revealed.add(checkKey(ch));
             // Bring the check into view: the attacker's board and the board it captures on.
-            const boards = this.shownChecks().filter((ch) => this.checkLines(ch).includes(badge)).flatMap((ch) => [[ch.from[0], 2 * ch.from[1] + ch.c], [ch.to[0], 2 * ch.to[1] + ch.c]]);
+            const boards = checks.flatMap((ch) => [[ch.from[0], 2 * ch.from[1] + ch.c], [ch.to[0], 2 * ch.to[1] + ch.c]]);
             if (boards.length) this.showBoards(boards, true);
           }
           this.redraw();
@@ -1047,7 +1057,21 @@ export class MultiverseView {
     const checks = (v && v.checks) || [];
     // At checkmate every check is shown, to see why and how it is mate; in the editor, always.
     if ((v.draft && v.draft.length) || v.status === 'checkmate' || v.allChecks) return checks;
-    return checks.filter((ch) => this.checkLines(ch).some((l) => this.revealed.has(l)));
+    return checks.filter((ch) => this.revealed.has(checkKey(ch)));
+  }
+
+  /** The checks timeline `l`'s "!" badge stands for. */
+  badgeChecks(l) {
+    return ((this.view && this.view.checks) || []).filter((ch) => this.checkLines(ch).includes(l));
+  }
+
+  /**
+   * Whether timeline `l`'s badge is on: all of its checks are shown. A check between two
+   * playable timelines has a badge on each, and they go on and off together.
+   */
+  badgeOn(l) {
+    const checks = this.badgeChecks(l);
+    return checks.length > 0 && checks.every((ch) => this.revealed.has(checkKey(ch)));
   }
 
   /**
@@ -1073,6 +1097,9 @@ export class MultiverseView {
     this.badges = [];
     if (!v || (v.draft && v.draft.length) || v.status === 'checkmate' || v.allChecks) return;
     const lines = [...new Set((v.checks || []).flatMap((ch) => this.checkLines(ch)))];
+    // The badges standing for the same checks as the one under the pointer light up with it.
+    const same = (l) => this.badgeChecks(l).map(checkKey).sort().join(' ');
+    const hovered = this.hoverBadge != null ? same(this.hoverBadge) : null;
     for (const l of lines) {
       const tl = this.timelines.get(l);
       if (!tl) continue;
@@ -1086,7 +1113,7 @@ export class MultiverseView {
       const badgeScale = r / 9;
       if (x < -r || y < -r || x > this.w + r || y > this.h + r) continue;
       this.badges.push({ l, x, y, r });
-      const on = this.revealed.has(l), hover = this.hoverBadge === l;
+      const on = this.badgeOn(l), hover = hovered != null && same(l) === hovered;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,.45)';
       ctx.shadowBlur = 4 * badgeScale;

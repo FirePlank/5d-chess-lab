@@ -161,9 +161,10 @@ export class OnlineGame {
       row: null, role: null, finished: null, tree: null, cur: 0, lans: [], start: null, pending: null,
       chat: [], chatSince: 0, searchFor: null, flagFor: null, lowtimePlayed: false, superseded: false,
       detached: false, spectators: 0, me: null, prevRow: null, revealAt: 0,
-      // Broadcast actions (movesign.js): our key, the channel's sender, the opponent's action
-      // shown before the database confirmed it ({ply, lan, at}), and our reply to it held until then.
-      key: null, channelSend: null, ahead: null, queued: null,
+      // Broadcast actions (movesign.js): our signing key (not `key`, the page's keyboard handler,
+      // which a field of that name would hide), the channel's sender, the opponent's action shown
+      // before the database confirmed it ({ply, lan, at}), and our reply to it held until then.
+      signKey: null, channelSend: null, ahead: null, queued: null,
       // When this page saw the turn it is now ours to play ({ply, at}): the think time sent for lag compensation.
       turnSeen: null,
     });
@@ -378,7 +379,7 @@ export class OnlineGame {
     if (this.role && !r.game.engine_color && !r.game.result) {
       movesign.newKey().then((key) => {
         if (this.id !== id) return;
-        this.key = key;
+        this.signKey = key;
         rpc('game_key', { p_id: id, p_key: key.pub }).catch(() => {});
       }).catch(() => {});
     }
@@ -626,7 +627,7 @@ export class OnlineGame {
 
   /** Show our action to the game's other pages at once, signed (movesign.js). */
   async broadcast(ply, lan) {
-    const key = this.key, send = this.channelSend, id = this.id;
+    const key = this.signKey, send = this.channelSend, id = this.id;
     if (!key || !send || !this.row || this.row.engine_color) return;
     try {
       send('move', { ply, lan, sig: await movesign.sign(key, id, ply, lan) });

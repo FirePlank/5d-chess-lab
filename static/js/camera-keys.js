@@ -16,7 +16,8 @@ export function bindCameraKeys(board, active) {
     const distance = 600 * (fast ? 3 : 1) * Math.min((now - previous) / 1000, 0.05) / board.cam.s / (Math.hypot(dx, dy) || 1);
     previous = now;
     if (dx || dy) {
-      board.fitted = false;
+      // Only the camera moves: `fitted` stays set, or the next position (any redraw) would fit
+      // the whole multiverse again.
       board.moveTo({ ...board.cam, x: board.cam.x + dx * distance, y: board.cam.y + dy * distance }, false);
     }
     frame = requestAnimationFrame(tick);
