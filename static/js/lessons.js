@@ -88,6 +88,10 @@ const F7_SETUP = line('(0T1)e2e3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)g7g6', '(0T3)
 const F7_TAKEN = `${F7_SETUP} ${line('(0T5)b3(0T1)f7', '(1T1)e8f7')}`;
 // The first pattern, up to the queen's check on b3 (mate on L1's board).
 const F7_SOFTMATE = `${F7_TAKEN} ${line('(1T2)g1h3', '(1T2)g8f6', '(1T3)h3g5', '(1T3)f7e8', '(1T4)c2c3', '(1T4)d7d5', '(1T5)d1b3')}`;
+// The bishop's f7 sac (Los Bro's game): queens traded, the f-pawn on f4 and a knight on f3, so the
+// bishop's path up the f-file and back in time crosses only empty squares of White's boards.
+const F7_BISHOP = line('(0T1)e2e3', '(0T1)e7e6', '(0T2)d1f3', '(0T2)d8f6', '(0T3)f3f6', '(0T3)g7f6', '(0T4)f2f4', '(0T4)b8c6',
+  '(0T5)g1f3', '(0T5)f8d6', '(0T6)g2g3', '(0T6)g8h6');
 // Defences: d5 on the queen's path; the queen on b6, ready to defend (or to counter on f2).
 const F7_BLOCKED = line('(0T1)g1f3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)d7d5', '(0T3)d1b3', '(0T3)c7c6', '(0T4)d2d4', '(0T4)c8f5');
 const F7_PARALLEL = line('(0T1)g1f3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)e7e6', '(0T3)d1b3', '(0T3)c7c6', '(0T4)d2d4', '(0T4)d8b6',
@@ -1189,6 +1193,60 @@ export const LESSONS = [
         solution: '(1T5)h3f4',
         wrong: 'Your knight on h3 goes to f4.',
         ok: 'None: L1’s board is mated again. Both patterns end the same way, with Black needing an escape through time.',
+      },
+    ],
+  },
+  {
+    id: 'f7bishop', title: 'The bishop’s f7 sac', blurb: 'A bishop phases up the f-file and back in time.', category: 'f7',
+    recap: [
+      'A bishop can make the f7 sac too, going up the f-file and back in time at once.',
+      'Its path needs empty squares on your boards: here the f-pawn and the knight reached them only after it passed. That’s phasing.',
+      'The new timeline starts before the queen trade, and L0 is far ahead in time: no parallel defence can reach. Kairos rates the sac about +3.',
+    ],
+    steps: [
+      {
+        type: 'read', at: [T0, F7_BISHOP],
+        say: 'The queens are traded, but the f7 sac is still on. This time with your **bishop** on f1: up the f-file and back in time, to f7 of turn 1.',
+        mark: { arrows: ['(0T7)f1>(0T1)f7'] },
+      },
+      {
+        type: 'choose',
+        say: 'Its path crosses f4 on turn 4 and f3 on turn 5. Your pawn and knight stand there now. Do they block it?',
+        mark: { squares: ['(0T4w)f4', '(0T5w)f3'] },
+        options: ['Yes: they are on the f-file', 'No: they arrived just after, on Black’s board of those turns'], answer: 1,
+        ok: 'On your boards of turns 4 and 5 those squares were still empty. The bishop **phases** through them.',
+      },
+      {
+        type: 'play', say: 'Sac on **f7** of turn 1 with your bishop, with check.',
+        mark: { arrows: ['(0T7)f1>(0T1)f7'] },
+        solution: '(0T7)f1(0T1)f7', reply: '(1T1)e8f7',
+        wrong: 'Your bishop on f1 goes six squares up and six turns back, to f7.',
+        ok: 'The king took. On L1 both queens are back: that timeline starts before the trade.',
+      },
+      {
+        type: 'choose',
+        say: 'Could Black defend L1 in parallel, with a piece from L0?',
+        mark: { boards: ['(0T7b)'] },
+        options: ['Yes, the bishop on d6', 'No: L0 is on turn 7, too far ahead'], answer: 1,
+        ok: 'No black piece on L0 can reach L1 at all. Black must defend on L1 alone.',
+      },
+      {
+        type: 'play', say: 'The same attack as with the queen: knight to **h3**, heading for g5.',
+        solution: '(1T2)g1h3', reply: '(1T2)g8f6',
+        wrong: 'The knight on g1 of L1 goes to h3.',
+        ok: 'Black brought a knight out.',
+      },
+      {
+        type: 'play', say: 'Check from **g5**.',
+        solution: '(1T3)h3g5', reply: '(1T3)f7e8',
+        wrong: 'Your knight on h3 jumps to g5.',
+        ok: 'The king went back to e8.',
+      },
+      {
+        type: 'play', say: 'Push **c3**, opening the way for your queen to b3.',
+        solution: '(1T4)c2c3',
+        wrong: 'Push the c2 pawn of L1 one square.',
+        ok: 'Qb3 is coming, as in the queen sac. Black’s best defence is a travel into the past: the softmate of the next lesson.',
       },
     ],
   },
