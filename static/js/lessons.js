@@ -104,6 +104,10 @@ const STALL_CHECK = sized('7x7', '3B1k*1/3p*p*1p*/5p1/n6/1p2NnN/p1p4/2K*4:0:1:w'
 const DOOR = line('(0T1)e2e3', '(0T1)g8f6', '(0T2)c2c3', '(0T2)d7d5', '(0T3)g1f3', '(0T3)c8f5');
 const PHASING = sized('7x7', '7/p*p*p*kp*1p*/5p1/3P3/4PP1/P*P*B3P*/1K*5:0:1:w');
 const PHASING_OPEN = line('(0T1)f3f4', '(0T1)a6a5', '(0T2)d4d5', '(0T2)c6c5');
+// Los Bro's second phasing position: the bishop, boxed in by its dragons, mates the king's turn-1
+// self on f5 once the f-pawn has jumped to f4 and enough turns have passed (four back from turn 5).
+const PHASING_WAIT = sized('7x7', '7/p*p*p*4/5k1/7/7/4DP*D/1K*3B1:0:1:w');
+const PHASING_WAIT_START = line('(0T1)b1c2', '(0T1)f5e6');
 // Tchaikovsky: Black castled on turn 1; White's bishop reached g5 since.
 const TCHAIKOVSKY = sized('8x8', 'r*nb1k*2r*/p*p*1p*1p*p*p*/2p1p3/8/3P4/2P2N2/P*P*2P*P*P*P*/R*1B1K*2R*:0:0:b');
 const TCHAIKOVSKY_CASTLED = line('(0T0)a7a5', '(0T1)a2a3', '(0T1)e8g8', '(0T2)c1g5', '(0T2)b7b6');
@@ -139,7 +143,7 @@ export const CATEGORIES = [
   { key: 'pieces', name: 'The pieces', blurb: 'How each piece moves through the four dimensions.' },
   { key: 'fundamentals', name: 'Fundamentals', blurb: 'Check, checkmate and stalemate across time.' },
   { key: 'advanced', name: 'Fairy pieces', blurb: 'The fairy pieces of the 5D game’s variants.' },
-  { key: 'tactics', name: 'Tactics', blurb: 'The 5D tactics players name: Tchaikovskys, closing the door, phasing and more.' },
+  { key: 'tactics', name: 'Tactics', blurb: 'The 5D tactics the community has named: Tchaikovskys, closing the door, phasing and more.' },
   { key: 'f7', name: 'The f7 sac', blurb: 'A common tactic threat in the opening: how it wins, and the three ways to stop it.' },
 ];
 
@@ -923,6 +927,7 @@ export const LESSONS = [
     recap: [
       'A bishop or queen travelling back in time crosses earlier boards, square by square.',
       'When a pawn moves off that path, it opens for one turn: the piece seems to phase through it.',
+      'Sometimes you make the gap yourself: move the pawn off the path, then wait until the path is long enough.',
     ],
     steps: [
       {
@@ -939,6 +944,30 @@ export const LESSONS = [
         type: 'play', goal: goals.mate(), say: 'Phase through: mate in one.',
         solution: '(0T3)c2d3',
         ok: 'Checkmate, through the gap the pawn left. That’s **phasing**.',
+      },
+      {
+        type: 'read', at: [PHASING_WAIT, PHASING_WAIT_START],
+        say: 'Now make the gap yourself. Your dragons box in your bishop, but up the f-file and back in time it could reach the king’s past self on **f5**.',
+        mark: { squares: ['(0T2w)f1', '(0T1w)f5'] },
+      },
+      {
+        type: 'play', say: 'Your own pawn on f2 blocks that path. Move it off: push it **two** squares.',
+        solution: '(0T2)f2f4', reply: '(0T2)c6c4',
+        why: { '(0T2)f2f3': 'On f3 it still blocks: the path crosses f3 on turn 3. Jump past it.' },
+        wrong: 'Push the f-pawn two squares, to f4.',
+        ok: 'The path is clear. But f5 is four ranks up, so the bishop must go four turns back, from turn 5.',
+      },
+      {
+        type: 'play', say: 'It’s only turn 3. **Wait**: move your king anywhere on its board.',
+        goal: ({ moves }) => (moves.length === 1 && moves[0].from[2] === 2 && moves[0].to[0] === 0 && moves[0].to[1] === 3)
+          || 'Just a king step on this board: time has to pass, nothing else.',
+        solution: '(0T3)c2c3', reply: '(0T3)b6b5',
+        ok: 'One more turn.',
+      },
+      {
+        type: 'play', goal: goals.mate(), say: 'Turn 4: wait once more, on this board. Any move here mates. Can you see why?',
+        solution: '(0T4)c3c2',
+        ok: 'Checkmate: from turn 5 the bishop checks f5 of turn 1, through squares your pawn had already left. Phasing by waiting.',
       },
     ],
   },
