@@ -932,7 +932,7 @@ export const LESSONS = [
       },
       {
         type: 'choose', say: 'Its path crosses d4 and d5 on earlier boards. Your pawn just left d4. Does that matter?',
-        options: ['No, pawns never block travels', 'Yes: it opened the path, for a turn'], answer: 1,
+        options: ['No: pawns always block travels', 'Yes: it opened the path, for a turn'], answer: 1,
         ok: 'The window is open only now. Next turn, the path runs through boards where the pawn still blocks.',
       },
       {
